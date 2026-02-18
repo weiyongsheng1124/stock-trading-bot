@@ -5,7 +5,6 @@ from pymongo import MongoClient
 from datetime import datetime, timedelta
 from bson import ObjectId
 import config
-import urllib.parse
 
 
 class MongoManager:
@@ -21,38 +20,41 @@ class MongoManager:
         self.uri = uri or config.MONGODB_URI
         self.db_name = db_name or config.MONGODB_DB
         
-        # 解析 URI 並添加 TLS 選項
+        # TLS/SSL 連線選項
+        client_options = {
+            "serverSelectionTimeoutMS": 30000,
+            "connectTimeoutMS": 30000,
+            "socketTimeoutMS": 45000,
+        }
+        
+        # 處理 TLS 選項
+        if "ssl=false" in self.uri.lower():
+            # URI 中已指定 ssl=false，則不使用 TLS
+            self.uri = self.uri.replace("mongodb+srv://", "mongodb://")
+            if "?" in self.uri:
+                self.uri = self.uri.replace("?ssl=false", "")
+            else:
+                self.uri = self.uri + "?ssl=false"
+        
         try:
-            # 如果沒有 tlsInconsistent，添加 TLS 選項
-            if "?" not in self.uri:
-                # 標準 URI 格式
-                if "@" in self.uri:
-                    # 解析並重新組裝
-                    prefix = self.uri.split("@")[0]
-                    cluster = self.uri.split("@")[1]
-                    self.uri = f"{prefix}@cluster0.mongodb.net/?retryWrites=true&w=majority"
-            
-            # TLS/SSL 連線選項
-            tls_options = {
-                "tls": True,
-                "tlsAllowInvalidCertificates": True,  # Railway 環境需要
-                "serverSelectionTimeoutMS": 30000,
-                "connectTimeoutMS": 30000,
-                "socketTimeoutMS": 45000,
-            }
-            
-            self.client = MongoClient(self.uri, **tls_options)
+            self.client = MongoClient(self.uri, **client_options)
             self.db = self.client[self.db_name]
-            
+            # 測試連線
+            self.client.admin.command('ping')
         except Exception as e:
-            # 如果失敗，嘗試不使用 TLS
-            print(f"MongoDB TLS 連線失敗，嘗試無 TLS: {e}")
-            self.client = MongoClient(
-                self.uri.replace("mongodb+srv://", "mongodb://"),
-                serverSelectionTimeoutMS=30000,
-                connectTimeoutMS=30000
-            )
-            self.db = self.client[self.db_name]
+            print(f"MongoDB 連線失敗: {e}")
+            # 嘗試無 SSL 模式
+            try:
+                fallback_uri = self.uri.replace("mongodb+srv://", "mongodb://")
+                if "?" in fallback_uri:
+                    fallback_uri = fallback_uri.replace("?retryWrites=true&w=majority", "?ssl=false&authSource=admin")
+                else:
+                    fallback_uri += "?ssl=false&authSource=admin"
+                self.client = MongoClient(fallback_uri, **client_options)
+                self.db = self.client[self.db_name]
+            except Exception as e2:
+                print(f"MongoDB Fallback 連線也失敗: {e2}")
+                raise e2
         
         # 建立索引
         self._ensure_indexes()
