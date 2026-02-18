@@ -490,6 +490,7 @@ def run_backtest_with_params(df, params, initial_capital=100000):
                 exit_price = current_price
                 exit_date = df.index[i]
                 pnl_pct = (exit_price - entry_price) / entry_price * 100
+                is_win = pnl_pct > 0
                 
                 trades.append({
                     "id": len(trades) + 1,
@@ -498,7 +499,7 @@ def run_backtest_with_params(df, params, initial_capital=100000):
                     "entry_price": float(round(entry_price, 2)),
                     "exit_price": float(round(exit_price, 2)),
                     "pnl": float(round(pnl_pct, 2)),
-                    "win": pnl_pct > 0
+                    "win": bool(is_win)
                 })
                 
                 # 記錄賣出點
@@ -516,7 +517,7 @@ def run_backtest_with_params(df, params, initial_capital=100000):
         
         # 統計
         total = len(trades)
-        winning = [t for t in trades if t["win"]]
+        winning = [t for t in trades if t.get("win") is True or t.get("win") == "true"]
         win_rate = len(winning) / total * 100 if total > 0 else 0
         
         # 計算回撤曲線
