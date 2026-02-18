@@ -13,7 +13,8 @@ import os
 
 from config import (
     TRADING_CONFIG, STRATEGY_PARAMS, TradingState,
-    GOLDEN_CROSS_CONFIRM_BARS, COOLDOWN_HOURS, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID
+    GOLDEN_CROSS_CONFIRM_BARS, COOLDOWN_HOURS, 
+    TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, ENABLE_TELEGRAM_BOT
 )
 from indicators import TechnicalIndicators
 from json_manager import JsonManager
