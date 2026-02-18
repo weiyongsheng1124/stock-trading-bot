@@ -263,9 +263,12 @@ def backtest_result():
     if not symbol:
         return redirect(url_for('backtest'))
     
-    result = run_backtest(symbol, period, interval, initial_capital)
+    try:
+        result = run_backtest(symbol, period, interval, initial_capital)
+    except Exception as e:
+        result = {"error": f"回測發生錯誤：{str(e)}"}
     
-    if "error" in result:
+    if isinstance(result, dict) and "error" in result:
         return render_template('backtest_result.html', 
                            symbol=symbol, period=period, 
                            interval=interval, capital=initial_capital,
@@ -284,7 +287,7 @@ def api_optimize():
     """參數優化器 - 根據目標勝率推薦最佳參數"""
     data = request.get_json()
     symbol = data.get('symbol')
-    target_win_rate = float(data.get('target_win_rate', 60))  # 預設 60%
+    target_win_rate = float(data.get('target_win_rate', 60))
     period = data.get('period', '1y')
     interval = data.get('interval', '1d')
     initial_capital = int(data.get('initial_capital', 100000))
@@ -294,9 +297,11 @@ def api_optimize():
     
     try:
         results = optimize_params(symbol, period, interval, initial_capital, target_win_rate)
+        if "error" in results:
+            return jsonify({"success": False, "error": results["error"]})
         return jsonify({"success": True, **results})
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)})
+        return jsonify({"success": False, "error": f"優化過程發生錯誤：{str(e)}"})
 
 
 def optimize_params(symbol, period, interval, initial_capital, target_win_rate):

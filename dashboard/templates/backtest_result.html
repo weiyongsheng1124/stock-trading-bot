@@ -46,35 +46,35 @@
         <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
             <div class="bg-white rounded-lg shadow p-4">
                 <div class="text-gray-500 text-xs">總報酬率</div>
-                <div class="text-2xl font-bold {% if result.total_return >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
-                    {{ "%.2f"|format(result.total_return) }}%
+                <div class="text-2xl font-bold {% if result.total_return|default(0) >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                    {{ "%.2f"|format(result.total_return|default(0)) }}%
                 </div>
             </div>
             <div class="bg-white rounded-lg shadow p-4">
                 <div class="text-gray-500 text-xs">交易次數</div>
-                <div class="text-2xl font-bold text-blue-600">{{ result.total_trades }}</div>
+                <div class="text-2xl font-bold text-blue-600">{{ result.total_trades|default(0) }}</div>
             </div>
             <div class="bg-white rounded-lg shadow p-4">
                 <div class="text-gray-500 text-xs">勝率</div>
-                <div class="text-2xl font-bold {% if result.win_rate >= 50 %}text-green-600{% else %}text-red-600{% endif %}">
-                    {{ "%.1f"|format(result.win_rate) }}%
+                <div class="text-2xl font-bold {% if result.win_rate|default(0) >= 50 %}text-green-600{% else %}text-red-600{% endif %}">
+                    {{ "%.1f"|format(result.win_rate|default(0)) }}%
                 </div>
-                <div class="text-xs text-gray-400">{{ result.wins }} 勝 / {{ result.losses }} 敗</div>
+                <div class="text-xs text-gray-400">{{ result.wins|default(0) }} 勝 / {{ result.losses|default(0) }} 敗</div>
             </div>
             <div class="bg-white rounded-lg shadow p-4">
                 <div class="text-gray-500 text-xs">最大回撤</div>
-                <div class="text-2xl font-bold text-red-600">{{ "%.2f"|format(result.max_drawdown) }}%</div>
+                <div class="text-2xl font-bold text-red-600">{{ "%.2f"|format(result.max_drawdown|default(0)) }}%</div>
             </div>
             <div class="bg-white rounded-lg shadow p-4">
                 <div class="text-gray-500 text-xs">最終資金</div>
-                <div class="text-2xl font-bold {% if result.final_capital > capital %}text-green-600{% else %}text-red-600{% endif %}">
-                    ${{ "{:,.0f}".format(result.final_capital) }}
+                <div class="text-2xl font-bold {% if result.final_capital|default(capital) > capital %}text-green-600{% else %}text-red-600{% endif %}">
+                    ${{ "{:,.0f}".format(result.final_capital|default(capital)) }}
                 </div>
             </div>
             <div class="bg-white rounded-lg shadow p-4">
                 <div class="text-gray-500 text-xs">獲利金額</div>
-                <div class="text-2xl font-bold {% if result.final_capital > capital %}text-green-600{% else %}text-red-600{% endif %}">
-                    ${{ "{:+,.0f}".format(result.final_capital - capital) }}
+                <div class="text-2xl font-bold {% if (result.final_capital|default(capital) - capital) >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                    ${{ "{:+,.0f}".format((result.final_capital|default(capital) - capital)) }}
                 </div>
             </div>
         </div>
@@ -249,6 +249,10 @@
         // ============ 參數優化器 ============
         function optimizeParams() {
             const targetWinRate = document.getElementById('targetWinRate').value;
+            const btn = document.querySelector('button[onclick="optimizeParams()"]');
+            const originalText = btn.innerText;
+            btn.disabled = true;
+            btn.innerText = '🔄 搜尋中...';
             
             document.getElementById('optimizeResult').classList.add('hidden');
             document.getElementById('optimizeLoading').classList.remove('hidden');
@@ -264,11 +268,16 @@
                     initial_capital: capital
                 })
             })
-            .then(r => r.json())
+            .then(r => {
+                if (!r.ok) throw new Error('API 請求失敗');
+                return r.json();
+            })
             .then(data => {
+                btn.disabled = false;
+                btn.innerText = originalText;
                 document.getElementById('optimizeLoading').classList.add('hidden');
                 
-                if (data.success) {
+                if (data.success && data.recommended_params) {
                     const params = data.recommended_params;
                     const result = data.result;
                     
@@ -278,20 +287,22 @@
                     document.getElementById('rec-rsi-period').innerText = params.rsi.period;
                     document.getElementById('rec-confirm').innerText = params.confirm_bars;
                     document.getElementById('rec-stop').innerText = params.stop_loss_multiplier;
-                    document.getElementById('rec-winrate').innerText = result.win_rate + '%';
-                    document.getElementById('rec-return').innerText = result.total_return + '%';
+                    document.getElementById('rec-winrate').innerText = (result.win_rate || 0) + '%';
+                    document.getElementById('rec-return').innerText = (result.total_return || 0) + '%';
                     
                     // 儲存推薦參數
                     window.recommendedParams = params;
                     
                     document.getElementById('optimizeResult').classList.remove('hidden');
                 } else {
-                    alert('❌ ' + data.error);
+                    alert('❌ ' + (data.error || '找不到符合條件的參數組合'));
                 }
             })
             .catch(err => {
+                btn.disabled = false;
+                btn.innerText = originalText;
                 document.getElementById('optimizeLoading').classList.add('hidden');
-                alert('❌ 優化失敗');
+                alert('❌ 優化失敗：' + err.message);
             });
         }
 
