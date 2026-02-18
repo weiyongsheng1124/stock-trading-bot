@@ -396,20 +396,34 @@
             const buyPoints = (buySignals || []).map(b => ({x: b.time, y: b.price}));
             const sellPoints = (sellSignals || []).map(s => ({x: s.time, y: s.price}));
             
+            // 股價資料
+            const priceData = {{ result.price_data | tojson }};
+            
             new Chart(document.getElementById('priceChart'), {
                 type: 'line',
                 data: {
-                    labels: [...new Set([...buySignals.map(b => b.time), ...sellSignals.map(s => s.time)])].sort(),
+                    labels: priceData.map(p => p.time),
                     datasets: [
+                        {
+                            label: '股價',
+                            data: priceData.map(p => p.close),
+                            borderColor: '#374151',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            tension: 0.1,
+                            pointRadius: 0,
+                            order: 2
+                        },
                         {
                             label: '買入',
                             data: buyPoints,
                             backgroundColor: '#ef4444',  // 紅色
                             borderColor: '#ef4444',
                             pointStyle: 'triangle',
-                            pointRadius: 12,
+                            pointRadius: 10,
                             pointRotation: 0,
-                            showLine: false
+                            showLine: false,
+                            order: 1
                         },
                         {
                             label: '賣出',
@@ -417,9 +431,10 @@
                             backgroundColor: '#22c55e',  // 綠色
                             borderColor: '#22c55e',
                             pointStyle: 'triangle',
-                            pointRadius: 12,
+                            pointRadius: 10,
                             pointRotation: 180,
-                            showLine: false
+                            showLine: false,
+                            order: 1
                         }
                     ]
                 },
@@ -428,18 +443,21 @@
                     plugins: {
                         legend: { display: false },
                         tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    if (context.dataset.label === '買入') return `買入: $${context.parsed.y}`;
-                                    if (context.dataset.label === '賣出') return `賣出: $${context.parsed.y}`;
-                                    return `$${context.parsed.y}`;
-                                }
-                            }
+                            mode: 'index',
+                            intersect: false
                         }
                     },
                     scales: {
-                        x: { grid: { display: false }, ticks: { maxTicksLimit: 10 } },
+                        x: { 
+                            grid: { display: false },
+                            ticks: { maxTicksLimit: 20 }
+                        },
                         y: { position: 'right' }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
                     }
                 }
             });

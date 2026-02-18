@@ -395,6 +395,17 @@ def run_backtest_with_params(df, params, initial_capital=100000):
         # 複製資料避免修改原始資料
         df = df.copy()
         
+        # 記錄股價資料（用於圖表）
+        price_data = []
+        for i in range(len(df)):
+            price_data.append({
+                "time": str(df.index[i].date()),
+                "open": round(df['Open'].iloc[i], 2),
+                "high": round(df['High'].iloc[i], 2),
+                "low": round(df['Low'].iloc[i], 2),
+                "close": round(df['Close'].iloc[i], 2)
+            })
+        
         macd = MACD(df['Close'], 
                      window_slow=params["macd"]["slow"],
                      window_fast=params["macd"]["fast"], 
@@ -501,6 +512,7 @@ def run_backtest_with_params(df, params, initial_capital=100000):
             "equity_curve": equity_curve,
             "buy_signals": buy_signals,
             "sell_signals": sell_signals,
+            "price_data": price_data,
             "final_capital": round(capital, 2),
             "params": params
         }
