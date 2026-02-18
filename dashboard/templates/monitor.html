@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>股票交易機器人 - 即時監控</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         .status-buy { background-color: #dcfce7; color: #166534; }
         .status-holding { background-color: #fef08a; color: #854d0e; }
@@ -22,9 +22,9 @@
                     <div class="text-xl font-bold">📈 股票交易機器人</div>
                 </div>
                 <div class="flex items-center space-x-4">
-                    <a href="/monitor" class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700">即時監控</a>
-                    <a href="/config" class="px-4 py-2 hover:text-gray-300">策略配置</a>
+                    <a href="/monitor" class="bg-blue-600 px-4 py-2 rounded">即時監控</a>
                     <a href="/backtest" class="px-4 py-2 hover:text-gray-300">回測</a>
+                    <a href="/config" class="px-4 py-2 hover:text-gray-300">策略配置</a>
                 </div>
             </div>
         </div>
@@ -70,13 +70,62 @@
             </div>
             <div class="p-6">
                 <div id="symbols-list" class="flex flex-wrap gap-2">
-                    載入中...
+                    {% for s in symbols %}
+                    <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full flex items-center gap-2">
+                        {{ s }}
+                        <button onclick="removeSymbol('{{ s }}')" class="text-blue-600 hover:text-red-600 font-bold">&times;</button>
+                    </span>
+                    {% endfor %}
                 </div>
             </div>
         </div>
 
+        <!-- 即時圖表區域 -->
+        {% for symbol in symbols %}
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden mb-8">
+            <div class="bg-gray-800 text-white px-6 py-4 flex justify-between items-center">
+                <h2 class="text-lg font-bold">📊 {{ symbol }} 即時監控</h2>
+                <span id="status-{{ symbol }}" class="text-sm px-3 py-1 rounded bg-gray-600">載入中...</span>
+            </div>
+            <div class="p-6">
+                <!-- K線圖 -->
+                <div class="mb-6">
+                    <h3 class="font-bold text-gray-700 mb-2">5分鐘K線</h3>
+                    <canvas id="chart-{{ symbol }}" height="200"></canvas>
+                </div>
+                
+                <!-- MACD -->
+                <div class="mb-6">
+                    <h3 class="font-bold text-gray-700 mb-2">MACD</h3>
+                    <canvas id="macd-{{ symbol }}" height="100"></canvas>
+                </div>
+                
+                <!-- RSI & ADX -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <h3 class="font-bold text-gray-700 mb-2">RSI</h3>
+                        <canvas id="rsi-{{ symbol }}" height="80"></canvas>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-700 mb-2">ADX</h3>
+                        <canvas id="adx-{{ symbol }}" height="80"></canvas>
+                    </div>
+                </div>
+                
+                <!-- 持倉資訊 -->
+                <div id="holding-{{ symbol }}" class="mt-4 p-4 bg-gray-50 rounded-lg hidden">
+                    <div class="grid grid-cols-3 gap-4 text-sm">
+                        <div>買入價：<span id="entry-{{ symbol }}" class="font-bold"></span></div>
+                        <div>停損價：<span id="stop-{{ symbol }}" class="font-bold text-red-600"></span></div>
+                        <div>狀態：<span id="position-status-{{ symbol }}" class="font-bold"></span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- 持倉區域 -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <!-- 持倉區域 -->
             <div class="bg-white rounded-lg shadow-lg overflow-hidden">
                 <div class="bg-gray-800 text-white px-6 py-4">
                     <h2 class="text-lg font-bold">📊 目前持倉</h2>
@@ -89,21 +138,15 @@
                             <div class="flex justify-between items-center mb-2">
                                 <span class="font-bold text-lg">{{ pos.symbol }}</span>
                                 <span class="px-2 py-1 rounded text-xs font-bold">
-                                    {% if pos.status == 'SIGNAL_BUY_SENT' %}
-                                    🟢 待買入
-                                    {% elif pos.status == 'HOLDING' %}
-                                    🟡 持有中
-                                    {% elif pos.status == 'SIGNAL_SELL_SENT' %}
-                                    🔴 待賣出
-                                    {% endif %}
+                                    {% if pos.status == 'SIGNAL_BUY_SENT' %}🟢 待買入
+                                    {% elif pos.status == 'HOLDING' %}🟡 持有中
+                                    {% elif pos.status == 'SIGNAL_SELL_SENT' %}🔴 待賣出{% endif %}
                                 </span>
                             </div>
                             {% if pos.holding_info %}
                             <div class="grid grid-cols-2 gap-2 text-sm">
-                                <div>買入價：<span class="font-bold">{{ pos.holding_info.entry_price }}</span></div>
-                                <div>停損：<span class="font-bold text-red-600">{{ pos.holding_info.stop_loss }}</span></div>
-                                <div>買入時間：<span class="text-gray-600">{{ pos.holding_info.entry_time }}</span></div>
-                                <div>數量：<span class="text-gray-600">{{ pos.holding_info.quantity or '未輸入' }}</span></div>
+                                <div>買入價：{{ pos.holding_info.entry_price }}</div>
+                                <div>停損：{{ pos.holding_info.stop_loss }}</div>
                             </div>
                             {% endif %}
                         </div>
@@ -142,64 +185,22 @@
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- 交易紀錄 -->
-        <div class="mt-8 bg-white rounded-lg shadow-lg overflow-hidden">
-            <div class="bg-gray-800 text-white px-6 py-4">
-                <h2 class="text-lg font-bold">📜 交易紀錄</h2>
-            </div>
-            <div class="p-6">
-                <div id="trades-table" class="overflow-x-auto">
-                    <div class="text-center text-gray-500 py-4">載入中...</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 系統日誌 -->
-        <div class="mt-8 bg-white rounded-lg shadow-lg overflow-hidden">
-            <div class="bg-gray-800 text-white px-6 py-4">
-                <h2 class="text-lg font-bold">📋 系統日誌</h2>
-            </div>
-            <div class="p-6">
-                <div id="logs-container" class="font-mono text-xs bg-gray-900 text-green-400 p-4 rounded h-48 overflow-y-auto">
-                    載入中...
-                </div>
+    <!-- 新增股票 Modal -->
+    <div id="symbolModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 w-96 max-w-full mx-4">
+            <h3 class="text-xl font-bold mb-4">新增監控股票</h3>
+            <input type="text" id="newSymbol" placeholder="例如：2330.TW" 
+                   class="w-full px-4 py-2 border rounded mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <div class="flex justify-end gap-2">
+                <button onclick="closeSymbolModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800">取消</button>
+                <button id="symbolSubmit" onclick="addSymbol()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">新增</button>
             </div>
         </div>
     </div>
 
     <script>
-        // 自動刷新
-        function refreshData() {
-            // 刷新持倉
-            fetch('/api/positions')
-                .then(r => r.json())
-                .then(data => {
-                    if (data.length === 0) {
-                        document.getElementById('trades-table').innerHTML = '<div class="text-center text-gray-500 py-4">沒有持倉</div>';
-                    }
-                });
-            
-            // 刷新日誌
-            fetch('/api/logs?limit=20')
-                .then(r => r.json())
-                .then(logs => {
-                    const container = document.getElementById('logs-container');
-                    container.innerHTML = logs.map(log => 
-                        `<div>[${new Date(log.timestamp).toLocaleTimeString()}] ${log.level} - ${log.message}</div>`
-                    ).join('');
-                });
-        }
-
-        // 頁面載入時刷新
-        document.addEventListener('DOMContentLoaded', function() {
-            refreshData();
-            loadSymbols();
-            
-            // 每30秒自動刷新
-            setInterval(refreshData, 30000);
-        });
-
         // ============ 監控股票管理 ============
         function loadSymbols() {
             fetch('/api/symbols')
@@ -221,13 +222,13 @@
 
         function closeSymbolModal() {
             document.getElementById('symbolModal').classList.add('hidden');
+            document.getElementById('newSymbol').value = '';
         }
 
         function addSymbol() {
             const symbol = document.getElementById('newSymbol').value.trim().toUpperCase();
             if (!symbol) return;
             
-            // 顯示載入中
             document.getElementById('symbolSubmit').disabled = true;
             document.getElementById('symbolSubmit').innerText = '驗證中...';
             
@@ -242,18 +243,16 @@
                 document.getElementById('symbolSubmit').innerText = '新增';
                 
                 if (data.success) {
-                    document.getElementById('newSymbol').value = '';
                     closeSymbolModal();
                     loadSymbols();
-                    alert('✅ ' + data.symbol + ' 已新增到監控清單！');
+                    location.reload();  // 重新載入頁面顯示新圖表
                 } else {
                     alert('❌ ' + data.error);
                 }
             })
             .catch(err => {
                 document.getElementById('symbolSubmit').disabled = false;
-                document.getElementById('symbolSubmit').innerText = '新增';
-                alert('❌ 驗證失敗：' + err.message);
+                alert('❌ 驗證失敗');
             });
         }
 
@@ -269,22 +268,149 @@
             .then(data => {
                 if (data.success) {
                     loadSymbols();
+                    location.reload();
                 }
             });
         }
-    </script>
 
-    <!-- 新增股票 Modal -->
-    <div id="symbolModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg p-6 w-96 max-w-full mx-4">
-            <h3 class="text-xl font-bold mb-4">新增監控股票</h3>
-            <input type="text" id="newSymbol" placeholder="例如：2330.TW" 
-                   class="w-full px-4 py-2 border rounded mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <div class="flex justify-end gap-2">
-                <button onclick="closeSymbolModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800">取消</button>
-                <button onclick="addSymbol()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">新增</button>
-            </div>
-        </div>
-    </div>
+        // ============ 圖表載入 ============
+        {% for symbol in symbols %}
+        fetch('/api/live_chart/{{ symbol }}')
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('status-{{ symbol }}').innerText = '無法載入';
+                    document.getElementById('status-{{ symbol }}').className = 'text-sm px-3 py-1 rounded bg-red-600';
+                    return;
+                }
+                
+                // 更新狀態
+                const statusEl = document.getElementById('status-{{ symbol }}');
+                if (data.position_status === 'HOLDING') {
+                    statusEl.innerText = '🟡 持有中';
+                    statusEl.className = 'text-sm px-3 py-1 rounded bg-yellow-500 text-white';
+                } else if (data.position_status) {
+                    statusEl.innerText = '📡 ' + data.position_status;
+                } else {
+                    statusEl.innerText = '✅ 監控中';
+                    statusEl.className = 'text-sm px-3 py-1 rounded bg-green-600 text-white';
+                }
+                
+                // 更新持倉資訊
+                if (data.entry_price || data.stop_loss) {
+                    document.getElementById('holding-{{ symbol }}').classList.remove('hidden');
+                    if (data.entry_price) document.getElementById('entry-{{ symbol }}').innerText = data.entry_price;
+                    if (data.stop_loss) document.getElementById('stop-{{ symbol }}').innerText = data.stop_loss;
+                    document.getElementById('position-status-{{ symbol }}').innerText = data.position_status || '無';
+                }
+                
+                const candles = data.candles;
+                const times = candles.map(c => c.time.split(' ')[1]);
+                const opens = candles.map(c => c.open);
+                const highs = candles.map(c => c.high);
+                const lows = candles.map(c => c.low);
+                const closes = candles.map(c => c.close);
+                
+                // K線圖
+                const chartCtx = document.getElementById('chart-{{ symbol }}').getContext('2d');
+                
+                // 準備K線資料
+                const candleData = candles.map(c => ({
+                    x: c.time,
+                    o: c.open,
+                    h: c.high,
+                    l: c.low,
+                    c: c.close
+                }));
+                
+                new Chart(chartCtx, {
+                    type: 'line',
+                    data: {
+                        labels: times,
+                        datasets: [{
+                            label: '價格',
+                            data: closes,
+                            borderColor: '#2563eb',
+                            backgroundColor: closes.map((c, i) => i > 0 && c >= opens[i] ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'),
+                            fill: false,
+                            tension: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { grid: { display: false } },
+                            y: { position: 'right' }
+                        }
+                    }
+                });
+                
+                // MACD
+                new Chart(document.getElementById('macd-{{ symbol }}'), {
+                    type: 'line',
+                    data: {
+                        labels: times,
+                        datasets: [
+                            { label: 'MACD', data: candles.map(c => c.macd), borderColor: '#2563eb', tension: 0.1 },
+                            { label: 'Signal', data: candles.map(c => c.macd_signal), borderColor: '#dc2626', tension: 0.1 }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { position: 'top' } },
+                        scales: { y: { position: 'right' } }
+                    }
+                });
+                
+                // RSI
+                new Chart(document.getElementById('rsi-{{ symbol }}'), {
+                    type: 'line',
+                    data: {
+                        labels: times,
+                        datasets: [{ 
+                            label: 'RSI', 
+                            data: candles.map(c => c.rsi), 
+                            borderColor: '#7c3aed',
+                            borderWidth: 1,
+                            fill: false,
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { display: false } },
+                        scales: { y: { min: 0, max: 100, position: 'right' } }
+                    }
+                });
+                
+                // ADX
+                new Chart(document.getElementById('adx-{{ symbol }}'), {
+                    type: 'line',
+                    data: {
+                        labels: times,
+                        datasets: [{ 
+                            label: 'ADX', 
+                            data: candles.map(c => c.adx), 
+                            borderColor: '#059669',
+                            borderWidth: 1,
+                            fill: false,
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { display: false } },
+                        scales: { y: { min: 0, max: 100, position: 'right' } }
+                    }
+                });
+            });
+        {% endfor %}
+
+        // 頁面載入
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSymbols();
+        });
+    </script>
 </body>
 </html>

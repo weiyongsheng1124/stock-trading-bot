@@ -1,15 +1,14 @@
 """
-Web Dashboard - Flask 伺服器
+Web Dashboard - Flask 伺服器（完整版）
 """
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 import sys
 import os
-import json
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from json_manager import JsonManager
-from config import STRATEGY_PARAMS, TRADING_CONFIG
+from config import STRATEGY_PARAMS, TRADING_CONFIG, DEFAULT_SYMBOLS
 
 app = Flask(__name__)
 
@@ -62,48 +61,114 @@ def api_logs():
     return jsonify(db.get_logs(level=level, limit=limit))
 
 
+@app.route('/api/live_chart/<symbol>')
+def api_live_chart(symbol):
+    import yfinance as yf
+    from ta.momentum import RSIIndicator
+    from ta.trend import MACD, ADXIndicator
+    from ta.volatility import AverageTrueRange
+    
+    try:
+        df = yf.Ticker(symbol).history(period="1d", interval="5m")
+        
+        if df is None or len(df) < 10:
+            return jsonify({"error": "無法取得資料"})
+        
+        params = db.get_strategy_params() or STRATEGY_PARAMS
+        
+        macd = MACD(df['Close'], 
+                     window_slow=params["macd"]["slow"],
+                     window_fast=params["macd"]["fast"], 
+                     window_sign=params["macd"]["signal"])
+        df['MACD'] = macd.macd()
+        df['MACD_Signal'] = macd.macd_signal()
+        df['MACD_Hist'] = macd.macd_diff()
+        
+        df['RSI'] = RSIIndicator(df['Close'], window=params["rsi"]["period"]).rsi()
+        
+        adx = ADXIndicator(df['High'], df['Low'], df['Close'], window=params["adx"]["period"])
+        df['ADX'] = adx.adx()
+        
+        atr = AverageTrueRange(df['High'], df['Low'], df['Close'], window=params["atr"]["period"])
+        df['ATR'] = atr.average_true_range()
+        
+        position = db.get_position(symbol)
+        stop_loss = None
+        entry_price = None
+        
+        if position and position.get("holding_info"):
+            entry_price = position["holding_info"].get("entry_price")
+            stop_loss = position["holding_info"].get("stop_loss")
+        
+        candles = []
+        for i, row in df.iterrows():
+            candle = {
+                "time": i.strftime("%Y-%m-%d %H:%M:%S"),
+                "open": round(row['Open'], 2),
+                "high": round(row['High'], 2),
+                "low": round(row['Low'], 2),
+                "close": round(row['Close'], 2),
+                "volume": int(row['Volume']),
+                "macd": round(row['MACD'], 4),
+                "macd_signal": round(row['MACD_Signal'], 4),
+                "macd_hist": round(row['MACD_Hist'], 4),
+                "rsi": round(row['RSI'], 2),
+                "adx": round(row['ADX'], 2),
+                "atr": round(row['ATR'], 2)
+            }
+            candles.append(candle)
+        
+        signals = db.get_signals(symbol=symbol, limit=20)
+        
+        return jsonify({
+            "symbol": symbol,
+            "candles": candles,
+            "stop_loss": stop_loss,
+            "entry_price": entry_price,
+            "signals": [s["signal_type"] for s in signals[-5:]],
+            "position_status": position["status"] if position else None
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+
 # ============ 監控股票管理 ============
 
 @app.route('/api/symbols')
 def api_symbols():
-    """取得監控股票清單"""
     return jsonify(db.get_monitor_symbols())
 
 
 @app.route('/api/symbols/add', methods=['POST'])
 def api_add_symbol():
-    """新增監控股票"""
     data = request.get_json()
     symbol = data.get('symbol', '').strip().upper()
     
     if not symbol:
         return jsonify({"success": False, "error": "請輸入股票代碼"})
     
-    # 驗證股票是否存在
     try:
         import yfinance as yf
         stock = yf.Ticker(symbol)
         hist = stock.history(period="1mo", interval="1d")
         if hist is None or len(hist) < 5:
-            return jsonify({"success": False, "error": f"無法取得 {symbol} 的資料，請確認代碼正確"})
+            return jsonify({"success": False, "error": f"無法取得 {symbol} 的資料"})
     except Exception as e:
         return jsonify({"success": False, "error": f"驗證失敗：{str(e)}"})
     
-    # 新增股票
     success = db.add_monitor_symbol(symbol)
     if success:
         return jsonify({"success": True, "symbol": symbol})
-    else:
-        return jsonify({"success": False, "error": "股票已存在於清單中"})
+    return jsonify({"success": False, "error": "股票已存在"})
 
 
 @app.route('/api/symbols/remove', methods=['POST'])
 def api_remove_symbol():
-    """移除監控股票"""
     data = request.get_json()
     symbol = data.get('symbol', '').strip().upper()
     success = db.remove_monitor_symbol(symbol)
-    return jsonify({"success": success, "symbol": symbol})
+    return jsonify({"success": success})
 
 
 # ============ 策略配置頁 ============
@@ -152,10 +217,41 @@ def backtest():
         symbol = request.form.get('symbol', '').upper().strip()
         period = request.form.get('period', '6mo')
         interval = request.form.get('interval', '1d')
-        return redirect(url_for('backtest_result', symbol=symbol, period=period, interval=interval))
+        initial_capital = int(request.form.get('initial_capital', 100000))
+        
+        if 'override' in request.form:
+            params = {
+                "macd": {
+                    "fast": int(request.form.get('macd_fast', 8)),
+                    "slow": int(request.form.get('macd_slow', 20)),
+                    "signal": int(request.form.get('macd_signal', 9))
+                },
+                "rsi": {
+                    "period": int(request.form.get('rsi_period', 14)),
+                    "oversold": int(request.form.get('rsi_oversold', 30)),
+                    "overbought": int(request.form.get('rsi_overbought', 70))
+                },
+                "adx": {
+                    "period": int(request.form.get('adx_period', 14)),
+                    "threshold": int(request.form.get('adx_threshold', 20))
+                },
+                "atr": {
+                    "period": int(request.form.get('atr_period', 14))
+                },
+                "confirm_bars": int(request.form.get('confirm_bars', 3)),
+                "stop_loss_multiplier": float(request.form.get('stop_loss_multiplier', 2.0))
+            }
+        else:
+            params = db.get_strategy_params() or STRATEGY_PARAMS
+        
+        return redirect(url_for('backtest_result', 
+                              symbol=symbol, 
+                              period=period, 
+                              interval=interval,
+                              capital=initial_capital))
     
     symbols = db.get_monitor_symbols()
-    return render_template('backtest.html', symbols=symbols)
+    return render_template('backtest.html', symbols=symbols, params=STRATEGY_PARAMS)
 
 
 @app.route('/backtest/result')
@@ -163,15 +259,26 @@ def backtest_result():
     symbol = request.args.get('symbol')
     period = request.args.get('period', '6mo')
     interval = request.args.get('interval', '1d')
+    initial_capital = int(request.args.get('capital', 100000))
     
     if not symbol:
         return redirect(url_for('backtest'))
     
-    result = run_backtest(symbol, period, interval)
-    return render_template('backtest_result.html', symbol=symbol, period=period, interval=interval, result=result)
+    result = run_backtest(symbol, period, interval, initial_capital)
+    
+    if "error" in result:
+        return render_template('backtest_result.html', 
+                           symbol=symbol, period=period, 
+                           interval=interval, capital=initial_capital,
+                           error=result["error"])
+    
+    return render_template('backtest_result.html',
+                        symbol=symbol, period=period,
+                        interval=interval, capital=initial_capital,
+                        result=result)
 
 
-def run_backtest(symbol, period, interval):
+def run_backtest(symbol, period, interval, initial_capital=100000):
     import yfinance as yf
     from ta.momentum import RSIIndicator
     from ta.trend import MACD, ADXIndicator
@@ -186,11 +293,13 @@ def run_backtest(symbol, period, interval):
     if df is None or len(df) < 50:
         return {"error": "無法取得足夠資料"}
     
-    # 計算指標
-    macd = MACD(df['Close'], window_slow=params["macd"]["slow"], 
-                 window_fast=params["macd"]["fast"], window_sign=params["macd"]["signal"])
+    macd = MACD(df['Close'], 
+                 window_slow=params["macd"]["slow"],
+                 window_fast=params["macd"]["fast"], 
+                 window_sign=params["macd"]["signal"])
     df['MACD'] = macd.macd()
     df['MACD_Signal'] = macd.macd_signal()
+    df['MACD_Hist'] = macd.macd_diff()
     
     df['RSI'] = RSIIndicator(df['Close'], window=params["rsi"]["period"]).rsi()
     
@@ -200,20 +309,14 @@ def run_backtest(symbol, period, interval):
     atr = AverageTrueRange(df['High'], df['Low'], df['Close'], window=params["atr"]["period"])
     df['ATR'] = atr.average_true_range()
     
-    # 黃金交叉確認 - 簡化版本
-    confirm_bars = params.get("confirm_bars", 3)
-    
-    # 黃金交叉訊號
     df['GC'] = (df['MACD'] > df['MACD_Signal']) & (df['MACD'].shift(1) <= df['MACD_Signal'].shift(1))
     df['DC'] = (df['MACD'] < df['MACD_Signal']) & (df['MACD'].shift(1) >= df['MACD_Signal'].shift(1))
     
-    # 建立黃金交叉確認欄位
+    confirm_bars = params.get("confirm_bars", 3)
     gc_confirm = [False] * len(df)
     
     for i in range(confirm_bars + 1, len(df)):
-        # 檢查第 0 根是否黃金交叉
         if df['GC'].iloc[i - confirm_bars]:
-            # 檢查接下來 confirm_bars 根 DIF 是否都在 DEA 上方
             all_above = True
             for j in range(i - confirm_bars + 1, i + 1):
                 if df['MACD'].iloc[j] <= df['MACD_Signal'].iloc[j]:
@@ -223,28 +326,39 @@ def run_backtest(symbol, period, interval):
     
     df['GC_Confirm'] = gc_confirm
     
-    # 回測
-    capital = 100000
+    capital = initial_capital
     shares = 0
     position = 0
     trades = []
+    equity_curve = []
     
     for i in range(30, len(df)):
+        if position:
+            equity = shares * df['Close'].iloc[i]
+        else:
+            equity = capital
+        equity_curve.append({
+            "time": str(df.index[i].date()),
+            "equity": round(equity, 2)
+        })
+        
         if df.iloc[i]['GC_Confirm'] and position == 0:
-            shares = capital // df.iloc[i]['Close']
-            entry_price = df.iloc[i]['Close']
+            shares = capital // df['Close'].iloc[i]
+            entry_price = df['Close'].iloc[i]
             entry_date = df.index[i]
             position = 1
             
         elif df.iloc[i]['DC'] and position == 1:
-            exit_price = df.iloc[i]['Close']
+            exit_price = df['Close'].iloc[i]
             pnl = (exit_price - entry_price) / entry_price * 100
             
             trades.append({
-                "date": str(entry_date.date()) + " ~ " + str(df.index[i].date()),
-                "entry": entry_price,
-                "exit": exit_price,
-                "pnl": pnl,
+                "id": len(trades) + 1,
+                "entry_date": str(entry_date.date()),
+                "exit_date": str(df.index[i].date()),
+                "entry_price": round(entry_price, 2),
+                "exit_price": round(exit_price, 2),
+                "pnl": round(pnl, 2),
                 "win": pnl > 0
             })
             
@@ -252,24 +366,37 @@ def run_backtest(symbol, period, interval):
             position = 0
             shares = 0
     
-    wins = len([t for t in trades if t["win"]])
+    winning = [t for t in trades if t["win"]]
     total = len(trades)
-    win_rate = wins / total * 100 if total > 0 else 0
+    win_rate = len(winning) / total * 100 if total > 0 else 0
     
-    # 計算平均損益
-    pnls = [t["pnl"] for t in trades]
-    avg_pnl = sum(pnls) / len(pnls) if pnls else 0
+    equity_values = [e["equity"] for e in equity_curve]
+    max_equity = max(equity_values) if equity_values else initial_capital
+    drawdown = []
+    for i, eq in enumerate(equity_values):
+        peak = max(equity_values[:i+1]) if equity_values[:i+1] else eq
+        dd = (peak - eq) / peak * 100 if peak > 0 else 0
+        drawdown.append({
+            "time": equity_curve[i]["time"],
+            "drawdown": round(dd, 2)
+        })
     
     return {
         "symbol": symbol,
         "period": period,
+        "interval": interval,
+        "initial_capital": initial_capital,
         "total_trades": total,
-        "wins": wins,
-        "losses": total - wins,
-        "win_rate": win_rate,
-        "total_return": (capital - 100000) / 100000 * 100,
-        "avg_pnl": round(avg_pnl, 2),
-        "trades": trades[-20:]
+        "wins": len(winning),
+        "losses": total - len(winning),
+        "win_rate": round(win_rate, 2),
+        "total_return": round((capital - initial_capital) / initial_capital * 100, 2),
+        "trades": trades,
+        "equity_curve": equity_curve,
+        "drawdown": drawdown,
+        "max_drawdown": round(max([d["drawdown"] for d in drawdown]) if drawdown else 0, 2),
+        "final_capital": round(capital, 2),
+        "params": params
     }
 
 
@@ -286,6 +413,5 @@ def server_error(e):
 
 
 if __name__ == '__main__':
-    # Railway 環境變數
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)

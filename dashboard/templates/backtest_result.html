@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>股票交易機器人 - 回測結果</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen">
     <!-- 導航欄 -->
@@ -16,55 +17,93 @@
                 </div>
                 <div class="flex items-center space-x-4">
                     <a href="/monitor" class="px-4 py-2 hover:text-gray-300">即時監控</a>
-                    <a href="/config" class="px-4 py-2 hover:text-gray-300">策略配置</a>
                     <a href="/backtest" class="bg-blue-600 px-4 py-2 rounded">回測</a>
+                    <a href="/config" class="px-4 py-2 hover:text-gray-300">策略配置</a>
                 </div>
             </div>
         </div>
     </nav>
 
     <div class="max-w-7xl mx-auto px-4 py-8">
-        <!-- 標題 -->
-        <div class="mb-8">
-            <a href="/backtest" class="text-blue-600 hover:underline mb-2 inline-block">← 重新回測</a>
-            <h1 class="text-3xl font-bold">{{ symbol }} 回測結果</h1>
-            <p class="text-gray-600">{{ period }} / {{ interval }} K線</p>
+        <!-- 返回連結 -->
+        <div class="mb-4">
+            <a href="/backtest" class="text-blue-600 hover:underline">← 重新回測</a>
         </div>
 
-        {% if result.error %}
+        {% if error %}
         <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-            ❌ {{ result.error }}
+            ❌ {{ error }}
         </div>
         {% else %}
-        
+
+        <!-- 標題 -->
+        <h1 class="text-3xl font-bold mb-2">{{ symbol }} 回測結果</h1>
+        <p class="text-gray-600 mb-8">
+            期間：{{ period }} / {{ interval }} / 初始資金：${{ "{:,}".format(capital) }}
+        </p>
+
         <!-- 統計卡片 -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white rounded-lg shadow p-6">
-                <div class="text-gray-500 text-sm">總報酬率</div>
-                <div class="text-3xl font-bold {% if result.total_return >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
+            <div class="bg-white rounded-lg shadow p-4">
+                <div class="text-gray-500 text-xs">總報酬率</div>
+                <div class="text-2xl font-bold {% if result.total_return >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
                     {{ "%.2f"|format(result.total_return) }}%
                 </div>
             </div>
-            
-            <div class="bg-white rounded-lg shadow p-6">
-                <div class="text-gray-500 text-sm">交易次數</div>
-                <div class="text-3xl font-bold text-blue-600">{{ result.total_trades }}</div>
-                <div class="text-sm text-gray-400">筆</div>
+            <div class="bg-white rounded-lg shadow p-4">
+                <div class="text-gray-500 text-xs">交易次數</div>
+                <div class="text-2xl font-bold text-blue-600">{{ result.total_trades }}</div>
             </div>
-            
-            <div class="bg-white rounded-lg shadow p-6">
-                <div class="text-gray-500 text-sm">勝率</div>
-                <div class="text-3xl font-bold {% if result.win_rate >= 50 %}text-green-600{% else %}text-red-600{% endif %}">
+            <div class="bg-white rounded-lg shadow p-4">
+                <div class="text-gray-500 text-xs">勝率</div>
+                <div class="text-2xl font-bold {% if result.win_rate >= 50 %}text-green-600{% else %}text-red-600{% endif %}">
                     {{ "%.1f"|format(result.win_rate) }}%
                 </div>
-                <div class="text-sm text-gray-400">{{ result.wins }} 勝 / {{ result.losses }} 敗</div>
+                <div class="text-xs text-gray-400">{{ result.wins }} 勝 / {{ result.losses }} 敗</div>
             </div>
-            
-            <div class="bg-white rounded-lg shadow p-6">
-                <div class="text-gray-500 text-sm">平均報酬</div>
-                <div class="text-3xl font-bold {% if result.avg_pnl >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
-                    {{ "%.2f"|format(result.avg_pnl|default(0)) }}%
+            <div class="bg-white rounded-lg shadow p-4">
+                <div class="text-gray-500 text-xs">最大回撤</div>
+                <div class="text-2xl font-bold text-red-600">{{ "%.2f"|format(result.max_drawdown) }}%</div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-4">
+                <div class="text-gray-500 text-xs">最終資金</div>
+                <div class="text-2xl font-bold {% if result.final_capital > capital %}text-green-600{% else %}text-red-600{% endif %}">
+                    ${{ "{:,.0f}".format(result.final_capital) }}
                 </div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-4">
+                <div class="text-gray-500 text-xs">獲利金額</div>
+                <div class="text-2xl font-bold {% if result.final_capital > capital %}text-green-600{% else %}text-red-600{% endif %}">
+                    ${{ "{:+,.0f}".format(result.final_capital - capital) }}
+                </div>
+            </div>
+        </div>
+
+        <!-- 圖表區域 -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <!-- 資金曲線 -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="font-bold text-lg mb-4">💰 資金曲線</h3>
+                <canvas id="equityChart" height="200"></canvas>
+            </div>
+
+            <!-- 回撤曲線 -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="font-bold text-lg mb-4">📉 回撤曲線</h3>
+                <canvas id="drawdownChart" height="200"></canvas>
+            </div>
+        </div>
+
+        <!-- 策略參數 -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h3 class="font-bold text-lg mb-4">⚙️ 使用的策略參數</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>MACD: {{ result.params.macd.fast }}, {{ result.params.macd.slow }}, {{ result.params.macd.signal }}</div>
+                <div>RSI: {{ result.params.rsi.period }} ({{ result.params.rsi.oversold }}/{{ result.params.rsi.overbought }})</div>
+                <div>ADX: {{ result.params.adx.period }} (> {{ result.params.adx.threshold }})</div>
+                <div>ATR: {{ result.params.atr.period }}</div>
+                <div>確認棒數: {{ result.params.confirm_bars }}</div>
+                <div>停損倍數: {{ result.params.stop_loss_multiplier }}</div>
             </div>
         </div>
 
@@ -77,23 +116,25 @@
                 <table class="w-full">
                     <thead class="bg-gray-100">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">期間</th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">買入</th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">賣出</th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">損益</th>
-                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">結果</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">買入日期</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">買入</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">賣出</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">損益</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">結果</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
                         {% for trade in result.trades %}
                         <tr class="{% if trade.win %}bg-green-50{% else %}bg-red-50{% endif %}">
-                            <td class="px-6 py-4 text-sm text-gray-900">{{ trade.date }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-900 text-right">{{ "%.2f"|format(trade.entry) }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-900 text-right">{{ "%.2f"|format(trade.exit) }}</td>
-                            <td class="px-6 py-4 text-sm font-bold {% if trade.pnl >= 0 %}text-green-600{% else %}text-red-600{% endif %} text-right">
+                            <td class="px-4 py-3 text-sm">{{ trade.id }}</td>
+                            <td class="px-4 py-3 text-sm">{{ trade.entry_date }}</td>
+                            <td class="px-4 py-3 text-sm text-right">${{ trade.entry_price }}</td>
+                            <td class="px-4 py-3 text-sm text-right">${{ trade.exit_price }}</td>
+                            <td class="px-4 py-3 text-sm text-right font-bold {% if trade.pnl >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
                                 {{ "%.2f"|format(trade.pnl) }}%
                             </td>
-                            <td class="px-6 py-4 text-center">
+                            <td class="px-4 py-3 text-center">
                                 {% if trade.win %}
                                 <span class="px-2 py-1 bg-green-200 text-green-800 rounded text-xs">獲利</span>
                                 {% else %}
@@ -114,5 +155,66 @@
             <a href="/backtest" class="text-blue-600 hover:underline">← 重新回測</a>
         </div>
     </div>
+
+    <!-- Chart.js 圖表 -->
+    {% if result and result.equity_curve %}
+    <script>
+        const equityData = {{ result.equity_curve | tojson }};
+        const drawdownData = {{ result.drawdown | tojson }};
+        
+        // 資金曲線
+        new Chart(document.getElementById('equityChart'), {
+            type: 'line',
+            data: {
+                labels: equityData.map(d => d.time),
+                datasets: [{
+                    label: '資金',
+                    data: equityData.map(d => d.equity),
+                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                    fill: true,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: { position: 'right' }
+                }
+            }
+        });
+        
+        // 回撤曲線
+        new Chart(document.getElementById('drawdownChart'), {
+            type: 'line',
+            data: {
+                labels: drawdownData.map(d => d.time),
+                datasets: [{
+                    label: '回撤',
+                    data: drawdownData.map(d => d.drawdown),
+                    borderColor: '#dc2626',
+                    backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                    fill: true,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: { 
+                        position: 'right',
+                        max: 0
+                    }
+                }
+            }
+        });
+    </script>
+    {% endif %}
 </body>
 </html>

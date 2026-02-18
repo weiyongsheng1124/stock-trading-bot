@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>股票交易機器人 - 回測</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 min-h-screen">
     <!-- 導航欄 -->
@@ -16,8 +16,8 @@
                 </div>
                 <div class="flex items-center space-x-4">
                     <a href="/monitor" class="px-4 py-2 hover:text-gray-300">即時監控</a>
-                    <a href="/config" class="px-4 py-2 hover:text-gray-300">策略配置</a>
                     <a href="/backtest" class="bg-blue-600 px-4 py-2 rounded">回測</a>
+                    <a href="/config" class="px-4 py-2 hover:text-gray-300">策略配置</a>
                 </div>
             </div>
         </div>
@@ -29,8 +29,9 @@
             <div class="bg-gray-800 text-white px-6 py-4">
                 <h2 class="text-lg font-bold">📊 回測參數</h2>
             </div>
-            <form method="POST" action="/backtest" class="p-6">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <form method="POST" class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <!-- 基本參數 -->
                     <div>
                         <label class="block text-gray-700 text-sm font-bold mb-2">股票代碼</label>
                         <select name="symbol" class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -43,8 +44,8 @@
                         <label class="block text-gray-700 text-sm font-bold mb-2">回測期間</label>
                         <select name="period" class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <option value="1mo">1 個月</option>
-                            <option value="3mo" selected>3 個月</option>
-                            <option value="6mo">6 個月</option>
+                            <option value="3mo">3 個月</option>
+                            <option value="6mo" selected>6 個月</option>
                             <option value="1y">1 年</option>
                             <option value="2y">2 年</option>
                         </select>
@@ -52,26 +53,85 @@
                     <div>
                         <label class="block text-gray-700 text-sm font-bold mb-2">K線週期</label>
                         <select name="interval" class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="1m">1 分鐘</option>
-                            <option value="5m">5 分鐘</option>
-                            <option value="15m">15 分鐘</option>
-                            <option value="30m">30 分鐘</option>
+                            <option value="1d" selected>日線</option>
                             <option value="1h">1 小時</option>
-                            <option value="1d" selected>1 日</option>
+                            <option value="30m">30 分鐘</option>
+                            <option value="15m">15 分鐘</option>
+                            <option value="5m">5 分鐘</option>
                         </select>
                     </div>
                 </div>
-                <div class="mt-6">
-                    <button type="submit" 
-                            class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg">
-                        ▶️ 執行回測
-                    </button>
+
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">初始資金</label>
+                    <input type="number" name="initial_capital" value="100000" 
+                           class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
+
+                <!-- 覆蓋策略參數 -->
+                <div class="mb-6">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="checkbox" name="override" value="true" 
+                               class="mr-2" onchange="toggleParams(this.checked)">
+                        <span class="font-bold text-gray-700">覆蓋策略參數</span>
+                    </label>
+                </div>
+
+                <div id="params-section" class="hidden grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+                    <div>
+                        <label class="block text-gray-600 text-xs mb-1">MACD Fast</label>
+                        <input type="number" name="macd_fast" value="{{ params.macd.fast }}" class="w-full px-2 py-1 border rounded">
+                    </div>
+                    <div>
+                        <label class="block text-gray-600 text-xs mb-1">MACD Slow</label>
+                        <input type="number" name="macd_slow" value="{{ params.macd.slow }}" class="w-full px-2 py-1 border rounded">
+                    </div>
+                    <div>
+                        <label class="block text-gray-600 text-xs mb-1">MACD Signal</label>
+                        <input type="number" name="macd_signal" value="{{ params.macd.signal }}" class="w-full px-2 py-1 border rounded">
+                    </div>
+                    <div>
+                        <label class="block text-gray-600 text-xs mb-1">RSI 週期</label>
+                        <input type="number" name="rsi_period" value="{{ params.rsi.period }}" class="w-full px-2 py-1 border rounded">
+                    </div>
+                    <div>
+                        <label class="block text-gray-600 text-xs mb-1">RSI Oversold</label>
+                        <input type="number" name="rsi_oversold" value="{{ params.rsi.oversold }}" class="w-full px-2 py-1 border rounded">
+                    </div>
+                    <div>
+                        <label class="block text-gray-600 text-xs mb-1">RSI Overbought</label>
+                        <input type="number" name="rsi_overbought" value="{{ params.rsi.overbought }}" class="w-full px-2 py-1 border rounded">
+                    </div>
+                    <div>
+                        <label class="block text-gray-600 text-xs mb-1">ADX 週期</label>
+                        <input type="number" name="adx_period" value="{{ params.adx.period }}" class="w-full px-2 py-1 border rounded">
+                    </div>
+                    <div>
+                        <label class="block text-gray-600 text-xs mb-1">ADX Threshold</label>
+                        <input type="number" name="adx_threshold" value="{{ params.adx.threshold }}" class="w-full px-2 py-1 border rounded">
+                    </div>
+                    <div>
+                        <label class="block text-gray-600 text-xs mb-1">ATR 週期</label>
+                        <input type="number" name="atr_period" value="{{ params.atr.period }}" class="w-full px-2 py-1 border rounded">
+                    </div>
+                    <div>
+                        <label class="block text-gray-600 text-xs mb-1">確認棒數</label>
+                        <input type="number" name="confirm_bars" value="{{ params.confirm_bars }}" class="w-full px-2 py-1 border rounded">
+                    </div>
+                    <div>
+                        <label class="block text-gray-600 text-xs mb-1">停損倍數</label>
+                        <input type="number" name="stop_loss_multiplier" value="{{ params.stop_loss_multiplier }}" step="0.1" class="w-full px-2 py-1 border rounded">
+                    </div>
+                </div>
+
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg">
+                    ▶️ 執行回測
+                </button>
             </form>
         </div>
 
         <!-- 說明 -->
-        <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
             <h3 class="font-bold text-blue-800 mb-2">📖 回測說明</h3>
             <ul class="text-sm text-blue-700 space-y-1">
                 <li>• 買入條件：MACD 黃金交叉 + 確認 3 根 K 棒 DIF 持續在 DEA 上方</li>
@@ -81,5 +141,11 @@
             </ul>
         </div>
     </div>
+
+    <script>
+        function toggleParams(checked) {
+            document.getElementById('params-section').classList.toggle('hidden', !checked);
+        }
+    </script>
 </body>
 </html>
