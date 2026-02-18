@@ -279,8 +279,8 @@
             .then(r => r.json())
             .then(data => {
                 if (data.error) {
-                    document.getElementById('status-{{ symbol }}').innerText = '無法載入';
-                    document.getElementById('status-{{ symbol }}').className = 'text-sm px-3 py-1 rounded bg-red-600';
+                    document.getElementById('status-{{ symbol }}').innerText = '❌ ' + (data.error || '載入失敗');
+                    document.getElementById('status-{{ symbol }}').className = 'text-sm px-3 py-1 rounded bg-red-600 text-white';
                     return;
                 }
                 
@@ -306,7 +306,8 @@
                 
                 const candles = data.candles;
                 if (!candles || candles.length === 0) {
-                    console.warn('沒有 K 線資料');
+                    document.getElementById('status-{{ symbol }}').innerText = '⚠️ 無K線資料';
+                    document.getElementById('status-{{ symbol }}').className = 'text-sm px-3 py-1 rounded bg-yellow-600 text-white';
                     return;
                 }
                 
@@ -409,6 +410,11 @@
                         scales: { y: { min: 0, max: 100, position: 'right' } }
                     }
                 });
+            })
+            .catch(err => {
+                console.error('載入失敗:', err);
+                document.getElementById('status-{{ symbol }}').innerText = '❌ 網路錯誤';
+                document.getElementById('status-{{ symbol }}').className = 'text-sm px-3 py-1 rounded bg-red-600 text-white';
             });
         {% endfor %}
 
