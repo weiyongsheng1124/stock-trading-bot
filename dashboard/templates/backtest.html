@@ -73,14 +73,15 @@
                     <label class="block text-gray-700 text-sm font-bold mb-2">使用策略</label>
                     <select name="strategy_type" id="strategy_type" onchange="toggleStrategyParams(this.value)"
                             class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option value="default">🔧 全局預設策略</option>
+                        <option value="default">🔧 預設策略</option>
                         {% if all_params %}
                         {% for s, data in all_params.items() %}
-                        <option value="symbol">⭐ {{ s }} 個別策略</option>
+                        <option value="symbol:{{ s }}">⭐ {{ s }} 個別策略</option>
                         {% endfor %}
                         {% endif %}
                         <option value="custom">📝 自訂參數</option>
                     </select>
+                    <input type="hidden" id="selected_symbol" name="selected_symbol" value="">
                 </div>
 
                 <!-- 自訂參數區塊 -->
@@ -155,6 +156,18 @@
         function toggleStrategyParams(value) {
             document.getElementById('params-section').classList.toggle('hidden', value !== 'custom');
         }
+        
+        // 表單提交前處理
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const strategyType = document.getElementById('strategy_type').value;
+            const symbolSelect = document.querySelector('select[name="symbol"]');
+            
+            if (strategyType.startsWith('symbol:')) {
+                document.getElementById('selected_symbol').value = strategyType.split(':')[1];
+            } else {
+                document.getElementById('selected_symbol').value = symbolSelect.value;
+            }
+        });
     </script>
 </body>
 </html>

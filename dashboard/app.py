@@ -297,14 +297,20 @@ def backtest():
         interval = request.form.get('interval', '1d')
         initial_capital = int(request.form.get('initial_capital', 100000))
         strategy_type = request.form.get('strategy_type', 'default')
+        selected_symbol = request.form.get('selected_symbol', '').upper().strip()
         
-        if strategy_type == 'symbol':
-            # 使用該股票的個別策略
-            symbol_params = db.get_symbol_params(symbol)
+        # 解析策略類型
+        if strategy_type.startswith('symbol:'):
+            # 使用指定股票的個別策略
+            target_symbol = selected_symbol or symbol
+            symbol_params = db.get_symbol_params(target_symbol)
             if symbol_params:
                 params = symbol_params
             else:
                 params = STRATEGY_PARAMS
+        elif strategy_type == 'custom':
+            # 自訂參數，會在下麵覆蓋
+            params = STRATEGY_PARAMS
         else:
             # 使用預設策略
             params = STRATEGY_PARAMS
