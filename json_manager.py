@@ -3,12 +3,13 @@ JSON 文件管理模組 - 取代 MongoDB
 """
 import json
 import os
+import base64
 import shutil
 from datetime import datetime
 from config import (
     POSITIONS_FILE, TRADES_FILE, SIGNALS_FILE, 
     LOGS_FILE, CONFIG_FILE, DATA_DIR, TradingState,
-    SYMBOLS_FILE, SYMBOL_PARAMS_FILE, DEFAULT_SYMBOLS
+    SYMBOLS_FILE, DEFAULT_SYMBOLS
 )
 
 
@@ -30,16 +31,6 @@ class JsonManager:
         if not os.path.exists(SYMBOLS_FILE):
             with open(SYMBOLS_FILE, 'w', encoding='utf-8') as f:
                 json.dump({"symbols": DEFAULT_SYMBOLS}, f, ensure_ascii=False)
-        
-        # 確保個別股票參數文件存在
-        if not os.path.exists(SYMBOL_PARAMS_FILE):
-            with open(SYMBOL_PARAMS_FILE, 'w', encoding='utf-8') as f:
-                json.dump({"symbols": {}}, f, ensure_ascii=False)
-        
-        # 讀取策略配置
-        if not os.path.exists(CONFIG_FILE):
-            from config import STRATEGY_PARAMS
-            self.save_strategy_params(STRATEGY_PARAMS)
     
     # ============ 文件讀寫 ============
     
@@ -53,10 +44,35 @@ class JsonManager:
     
     def _write_json(self, file_path, data):
         """寫入 JSON 文件"""
-        # 確保目錄存在
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2, default=str)
+        # 嘗試寫入，如果失敗則寫入 /tmp
+        try:
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2, default=str)
+        except Exception as e:
+            # 如果無法寫入，使用環境變數備份
+            print(f"警告: 無法寫入 {file_path}，使用環境變數備份: {e}")
+            self._backup_to_env(file_path, data)
+    
+    def _backup_to_env(self, file_path, data):
+        """將數據備份到環境變數"""
+        key = f"BACKUP_{os.path.basename(file_path).upper().replace('.', '_')}"
+        try:
+            encoded = base64.b64encode(json.dumps(data, ensure_ascii=False).encode('utf-8')).decode('ascii')
+            os.environ[key] = encoded
+        except:
+            pass
+    
+    def _restore_from_env(self, file_path, default=None):
+        """從環境變數恢復數據"""
+        key = f"BACKUP_{os.path.basename(file_path).upper().replace('.', '_')}"
+        try:
+            encoded = os.environ.get(key, '')
+            if encoded:
+                return json.loads(base64.b64decode(encoded).decode('utf-8'))
+        except:
+            pass
+        return default
     
     # ============ 持倉管理 ============
     
@@ -330,13 +346,27 @@ class JsonManager:
     def save_symbol_params(self, symbol, params):
         """儲存個別股票的策略參數"""
         try:
-            data = self._read_json(SYMBOL_PARAMS_FILE)
+            # 嘗試從環境變數讀取現有數據
+            existing = self._restore_from_env(SYMBOL_PARAMS_FILE, {"symbols": {}})
+            data = existing if isinstance(existing, dict) else {"symbols": {}}
+            
             symbol = symbol.upper()
             data["symbols"][symbol] = {
                 "params": params,
                 "updated_at": datetime.now().isoformat()
             }
-            self._write_json(SYMBOL_PARAMS_FILE, data)
+            
+            # 先嘗試寫入文件，如果失敗則寫入環境變數
+            try:
+                os.makedirs(os.path.dirname(SYMBOL_PARAMS_FILE), exist_ok=True)
+                with open(SYMBOL_PARAMS_FILE, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2, default=str)
+            except:
+                # 寫入環境變數備份
+                key = "BACKUP_SYMBOL_PARAMS"
+                encoded = base64.b64encode(json.dumps(data, ensure_ascii=False).encode('utf-8')).decode('ascii')
+                os.environ[key] = encoded
+            
             return True
         except Exception as e:
             print(f"儲存股票參數失敗: {e}")
@@ -345,18 +375,43 @@ class JsonManager:
     def get_symbol_params(self, symbol):
         """取得個別股票的策略參數"""
         try:
-            data = self._read_json(SYMBOL_PARAMS_FILE)
+            # 先嘗試從文件讀取
+            try:
+                with open(SYMBOL_PARAMS_FILE, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+            except:
+                # 從環境變數恢復
+                key = "BACKUP_SYMBOL_PARAMS"
+                encoded = os.environ.get(key, '')
+                if encoded:
+                    data = json.loads(base64.b64decode(encoded).decode('utf-8'))
+                else:
+                    data = {"symbols": {}}
+            
             symbol = symbol.upper()
             if symbol in data.get("symbols", {}):
                 return data["symbols"][symbol].get("params")
             return None
-        except:
+        except Exception as e:
+            print(f"取得股票參數失敗: {e}")
             return None
     
     def get_all_symbol_params(self):
         """取得所有股票的個別參數"""
         try:
-            data = self._read_json(SYMBOL_PARAMS_FILE)
+            # 先嘗試從文件讀取
+            try:
+                with open(SYMBOL_PARAMS_FILE, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+            except:
+                # 從環境變數恢復
+                key = "BACKUP_SYMBOL_PARAMS"
+                encoded = os.environ.get(key, '')
+                if encoded:
+                    data = json.loads(base64.b64decode(encoded).decode('utf-8'))
+                else:
+                    data = {"symbols": {}}
+            
             return data.get("symbols", {})
         except:
             return {}
@@ -364,11 +419,33 @@ class JsonManager:
     def delete_symbol_params(self, symbol):
         """刪除個別股票的策略參數"""
         try:
-            data = self._read_json(SYMBOL_PARAMS_FILE)
+            # 先嘗試從文件讀取
+            try:
+                with open(SYMBOL_PARAMS_FILE, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+            except:
+                # 從環境變數恢復
+                key = "BACKUP_SYMBOL_PARAMS"
+                encoded = os.environ.get(key, '')
+                if encoded:
+                    data = json.loads(base64.b64decode(encoded).decode('utf-8'))
+                else:
+                    data = {"symbols": {}}
+            
             symbol = symbol.upper()
             if symbol in data.get("symbols", {}):
                 del data["symbols"][symbol]
-                self._write_json(SYMBOL_PARAMS_FILE, data)
+                
+                # 寫回
+                try:
+                    with open(SYMBOL_PARAMS_FILE, 'w', encoding='utf-8') as f:
+                        json.dump(data, f, ensure_ascii=False, indent=2, default=str)
+                except:
+                    # 寫入環境變數備份
+                    key = "BACKUP_SYMBOL_PARAMS"
+                    encoded = base64.b64encode(json.dumps(data, ensure_ascii=False).encode('utf-8')).decode('ascii')
+                    os.environ[key] = encoded
+            
             return True
         except:
             return False
