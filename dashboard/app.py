@@ -379,12 +379,14 @@ def backtest_result():
         return render_template('backtest_result.html', 
                            symbol=symbol, period=period, 
                            interval=interval, capital=initial_capital,
-                           error=result["error"])
+                           error=result["error"],
+                           symbols=db.get_monitor_symbols())
     
     return render_template('backtest_result.html',
                         symbol=symbol, period=period,
                         interval=interval, capital=initial_capital,
-                        result=result)
+                        result=result,
+                        symbols=db.get_monitor_symbols())
 
 
 # ============ 參數優化器 ============

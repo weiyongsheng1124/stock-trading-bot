@@ -138,7 +138,7 @@
                             </div>
                         </div>
                         
-                        <button onclick="applyRecommendedParams()" 
+                        <button onclick="showApplyModal()" 
                                 class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded shadow">
                             ✅ 套用這些參數
                         </button>
@@ -241,26 +241,77 @@
         </div>
     </div>
 
-    <!-- 隱藏表單用於套用參數 -->
-    <form id="applyForm" action="/backtest" method="POST" class="hidden">
-        <input type="hidden" name="symbol" value="{{ symbol }}">
-        <input type="hidden" name="period" value="{{ period }}">
-        <input type="hidden" name="interval" value="{{ interval }}">
-        <input type="hidden" name="initial_capital" value="{{ capital }}">
-        <input type="hidden" name="override" value="true">
-        <input type="hidden" name="macd_fast" id="apply-macd-fast">
-        <input type="hidden" name="macd_slow" id="apply-macd-slow">
-        <input type="hidden" name="macd_signal" id="apply-macd-signal">
-        <input type="hidden" name="rsi_period" id="apply-rsi-period">
-        <input type="hidden" name="confirm_bars" id="apply-confirm">
-        <input type="hidden" name="stop_loss_multiplier" id="apply-stop">
-    </form>
+    <!-- 選擇股票 Modal -->
+    <div id="applyModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 w-96 max-w-full mx-4">
+            <h3 class="text-xl font-bold mb-4">選擇要套用參數的股票</h3>
+            <select id="targetSymbol" class="w-full px-4 py-2 border rounded mb-4">
+                <option value="">-- 請選擇股票 --</option>
+                {% for s in symbols %}
+                <option value="{{ s }}" {% if s == symbol %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+            </select>
+            <div class="flex justify-end gap-2">
+                <button onclick="closeApplyModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800">取消</button>
+                <button onclick="applyToSymbol()" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">套用</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         const symbol = '{{ symbol }}';
         const period = '{{ period }}';
         const interval = '{{ interval }}';
         const capital = {{ capital }};
+
+        function showApplyModal() {
+            if (!window.recommendedParams) {
+                alert('請先執行參數優化');
+                return;
+            }
+            document.getElementById('applyModal').classList.remove('hidden');
+        }
+
+        function closeApplyModal() {
+            document.getElementById('applyModal').classList.add('hidden');
+        }
+
+        function applyToSymbol() {
+            const targetSymbol = document.getElementById('targetSymbol').value;
+            if (!targetSymbol) {
+                alert('請選擇股票');
+                return;
+            }
+            
+            const p = window.recommendedParams;
+            const params = {
+                macd: { fast: p.macd.fast, slow: p.macd.slow, signal: p.macd.signal },
+                rsi: { period: p.rsi.period, oversold: p.rsi.oversold, overbought: p.rsi.overbought },
+                adx: { period: p.adx.period, threshold: p.adx.threshold },
+                atr: { period: p.atr.period },
+                confirm_bars: p.confirm_bars,
+                stop_loss_multiplier: p.stop_loss_multiplier,
+                new_high_period: p.new_high_period
+            };
+            
+            fetch('/api/symbol_params/' + targetSymbol, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ params: params })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ ' + targetSymbol + ' 參數已套用！');
+                    closeApplyModal();
+                } else {
+                    alert('❌ 套用失敗');
+                }
+            })
+            .catch(err => {
+                alert('❌ 網路錯誤');
+            });
+        }
 
         // ============ 參數優化器 ============
         function optimizeParams() {
@@ -325,22 +376,6 @@
             });
         }
 
-        function applyRecommendedParams() {
-            if (!window.recommendedParams) {
-                alert('請先執行參數優化');
-                return;
-            }
-            
-            const p = window.recommendedParams;
-            document.getElementById('apply-macd-fast').value = p.macd.fast;
-            document.getElementById('apply-macd-slow').value = p.macd.slow;
-            document.getElementById('apply-macd-signal').value = p.macd.signal;
-            document.getElementById('apply-rsi-period').value = p.rsi.period;
-            document.getElementById('apply-confirm').value = p.confirm_bars;
-            document.getElementById('apply-stop').value = p.stop_loss_multiplier;
-            
-            document.getElementById('applyForm').submit();
-        }
 
         // ============ 圖表 ============
         {% if result and result.equity_curve %}
