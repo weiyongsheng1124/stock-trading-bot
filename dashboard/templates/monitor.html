@@ -305,6 +305,11 @@
                 }
                 
                 const candles = data.candles;
+                if (!candles || candles.length === 0) {
+                    console.warn('沒有 K 線資料');
+                    return;
+                }
+                
                 const times = candles.map(c => c.time.split(' ')[1]);
                 const opens = candles.map(c => c.open);
                 const highs = candles.map(c => c.high);

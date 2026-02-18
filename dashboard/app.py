@@ -413,8 +413,19 @@ def run_backtest_with_params(df, params, initial_capital=100000):
         shares = 0
         position = 0
         trades = []
+        equity_curve = []
         
         for i in range(30, len(df)):
+            # 記錄資金曲線
+            if position:
+                equity = shares * df['Close'].iloc[i]
+            else:
+                equity = capital
+            equity_curve.append({
+                "time": str(df.index[i].date()),
+                "equity": round(equity, 2)
+            })
+            
             if df.iloc[i]['GC_Confirm'] and position == 0:
                 shares = capital // df['Close'].iloc[i]
                 entry_price = df['Close'].iloc[i]
@@ -426,8 +437,11 @@ def run_backtest_with_params(df, params, initial_capital=100000):
                 pnl = (exit_price - entry_price) / entry_price * 100
                 
                 trades.append({
+                    "id": len(trades) + 1,
                     "entry_date": str(entry_date.date()),
                     "exit_date": str(df.index[i].date()),
+                    "entry_price": round(entry_price, 2),
+                    "exit_price": round(exit_price, 2),
                     "pnl": round(pnl, 2),
                     "win": pnl > 0
                 })
@@ -442,13 +456,13 @@ def run_backtest_with_params(df, params, initial_capital=100000):
         win_rate = len(winning) / total * 100 if total > 0 else 0
         
         return {
-            "symbol": params,
             "total_trades": total,
             "wins": len(winning),
             "losses": total - len(winning),
             "win_rate": round(win_rate, 2),
             "total_return": round((capital - initial_capital) / initial_capital * 100, 2),
             "trades": trades,
+            "equity_curve": equity_curve,
             "final_capital": round(capital, 2),
             "params": params
         }
@@ -477,6 +491,20 @@ def run_backtest(symbol, period, interval, initial_capital=100000):
     
     if "error" in result:
         return result
+    
+    # 加入 equity_curve 和 drawdown
+    equity_values = [e["equity"] for e in result.get("equity_curve", [])]
+    if equity_values:
+        drawdown = []
+        for i, eq in enumerate(equity_values):
+            peak = max(equity_values[:i+1]) if equity_values[:i+1] else eq
+            dd = (peak - eq) / peak * 100 if peak > 0 else 0
+            drawdown.append({
+                "time": result["equity_curve"][i]["time"],
+                "drawdown": round(dd, 2)
+            })
+        result["drawdown"] = drawdown
+        result["max_drawdown"] = round(max([d["drawdown"] for d in drawdown]) if drawdown else 0, 2)
     
     return result
 
