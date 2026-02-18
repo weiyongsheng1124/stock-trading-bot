@@ -516,18 +516,29 @@ def run_backtest_with_params(df, params, initial_capital=100000):
         
         # 計算回撤曲線
         drawdown = []
-        if equity_curve:
+        if equity_curve and len(equity_curve) > 0:
             equity_values = [e["equity"] for e in equity_curve]
             peak = equity_values[0]
             
-            for eq in equity_values:
-                if eq > peak:
+            for idx, eq in enumerate(equity_values):
+                # 更新峰值
+                if eq >= peak:
                     peak = eq
-                dd = (peak - eq) / peak * 100 if peak > 0 else 0
+                
+                # 計算回撤：(峰值 - 當前) / 峰值 * 100
+                if peak > 0:
+                    dd = (peak - eq) / peak * 100
+                else:
+                    dd = 0
+                
                 drawdown.append({
-                    "time": equity_curve[len(drawdown)]["time"],
+                    "time": equity_curve[idx]["time"],
                     "drawdown": round(dd, 2)
                 })
+        
+        max_dd = 0
+        if drawdown:
+            max_dd = max([d["drawdown"] for d in drawdown])
         
         return {
             "total_trades": total,
@@ -541,7 +552,7 @@ def run_backtest_with_params(df, params, initial_capital=100000):
             "sell_signals": sell_signals,
             "price_data": price_data,
             "drawdown": drawdown,
-            "max_drawdown": round(max([d["drawdown"] for d in drawdown]) if drawdown else 0, 2),
+            "max_drawdown": round(max_dd, 2),
             "final_capital": round(capital, 2),
             "params": params
         }
