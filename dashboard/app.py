@@ -2,6 +2,7 @@
 Web Dashboard - Flask 伺服器（完整版）
 """
 from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask_cors import CORS
 import sys
 import os
 
@@ -11,6 +12,7 @@ from json_manager import JsonManager
 from config import STRATEGY_PARAMS, TRADING_CONFIG, DEFAULT_SYMBOLS
 
 app = Flask(__name__)
+CORS(app)  # 允許跨域請求
 
 db = JsonManager()
 
