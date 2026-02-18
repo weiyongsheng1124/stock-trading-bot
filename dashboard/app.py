@@ -75,10 +75,26 @@ def api_add_symbol():
     """新增監控股票"""
     data = request.get_json()
     symbol = data.get('symbol', '').strip().upper()
-    if symbol:
-        success = db.add_monitor_symbol(symbol)
-        return jsonify({"success": success, "symbol": symbol})
-    return jsonify({"success": False, "error": "無效的股票代碼"})
+    
+    if not symbol:
+        return jsonify({"success": False, "error": "請輸入股票代碼"})
+    
+    # 驗證股票是否存在
+    try:
+        import yfinance as yf
+        stock = yf.Ticker(symbol)
+        hist = stock.history(period="1mo", interval="1d")
+        if hist is None or len(hist) < 5:
+            return jsonify({"success": False, "error": f"無法取得 {symbol} 的資料，請確認代碼正確"})
+    except Exception as e:
+        return jsonify({"success": False, "error": f"驗證失敗：{str(e)}"})
+    
+    # 新增股票
+    success = db.add_monitor_symbol(symbol)
+    if success:
+        return jsonify({"success": True, "symbol": symbol})
+    else:
+        return jsonify({"success": False, "error": "股票已存在於清單中"})
 
 
 @app.route('/api/symbols/remove', methods=['POST'])

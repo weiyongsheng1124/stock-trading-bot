@@ -224,8 +224,12 @@
         }
 
         function addSymbol() {
-            const symbol = document.getElementById('newSymbol').value.trim();
+            const symbol = document.getElementById('newSymbol').value.trim().toUpperCase();
             if (!symbol) return;
+            
+            // 顯示載入中
+            document.getElementById('symbolSubmit').disabled = true;
+            document.getElementById('symbolSubmit').innerText = '驗證中...';
             
             fetch('/api/symbols/add', {
                 method: 'POST',
@@ -234,13 +238,22 @@
             })
             .then(r => r.json())
             .then(data => {
+                document.getElementById('symbolSubmit').disabled = false;
+                document.getElementById('symbolSubmit').innerText = '新增';
+                
                 if (data.success) {
                     document.getElementById('newSymbol').value = '';
                     closeSymbolModal();
                     loadSymbols();
+                    alert('✅ ' + data.symbol + ' 已新增到監控清單！');
                 } else {
-                    alert('新增失敗：' + (data.error || '股票代碼已存在'));
+                    alert('❌ ' + data.error);
                 }
+            })
+            .catch(err => {
+                document.getElementById('symbolSubmit').disabled = false;
+                document.getElementById('symbolSubmit').innerText = '新增';
+                alert('❌ 驗證失敗：' + err.message);
             });
         }
 
