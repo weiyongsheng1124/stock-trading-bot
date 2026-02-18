@@ -590,6 +590,9 @@ def run_backtest_with_params(df, params, initial_capital=100000):
         equity_curve = []  # 資金曲線（總資產 = 現金 + 股票價值）
         buy_signals = []  # 買入點
         sell_signals = []  # 賣出點
+        macd_data = []  # MACD 數據
+        rsi_data = []  # RSI 數據
+        adx_data = []  # ADX 數據
         
         # 固定倉位比例（50%）
         position_size = 1.0
@@ -600,6 +603,22 @@ def run_backtest_with_params(df, params, initial_capital=100000):
         for i in range(start_idx, len(df)):
             current_price = float(df['Close'].iloc[i])
             current_time = str(df.index[i].date())
+            
+            # 記錄技術指標
+            macd_data.append({
+                "time": current_time,
+                "macd": round(float(df['MACD'].iloc[i]), 4),
+                "signal": round(float(df['MACD_Signal'].iloc[i]), 4),
+                "hist": round(float(df['MACD_Hist'].iloc[i]), 4)
+            })
+            rsi_data.append({
+                "time": current_time,
+                "rsi": round(float(df['RSI'].iloc[i]), 2)
+            })
+            adx_data.append({
+                "time": current_time,
+                "adx": round(float(df['ADX'].iloc[i]), 2)
+            })
             
             # 計算總資產（現金 + 股票價值）
             if position:
@@ -713,6 +732,9 @@ def run_backtest_with_params(df, params, initial_capital=100000):
             "sell_signals": sell_signals,
             "price_data": price_data,
             "drawdown": drawdown,
+            "macd_data": macd_data,
+            "rsi_data": rsi_data,
+            "adx_data": adx_data,
             "max_drawdown": round(max_dd, 2),
             "final_capital": round(cash, 2),
             "params": params

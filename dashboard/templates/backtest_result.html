@@ -155,18 +155,18 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             <div class="bg-white rounded-lg shadow-lg p-6">
                 <h3 class="font-bold text-lg mb-4">💰 資金曲線</h3>
-                <canvas id="equityChart" height="200"></canvas>
+                <canvas id="equityChart" height="75"></canvas>
             </div>
             <div class="bg-white rounded-lg shadow-lg p-6">
                 <h3 class="font-bold text-lg mb-4">📉 回撤曲線</h3>
-                <canvas id="drawdownChart" height="200"></canvas>
+                <canvas id="drawdownChart" height="75"></canvas>
             </div>
         </div>
 
         <!-- 股價走勢圖（買賣點標記） -->
         <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
             <h3 class="font-bold text-lg mb-4">📈 股價走勢與買賣點</h3>
-            <canvas id="priceChart" height="300"></canvas>
+            <canvas id="priceChart" height="75"></canvas>
             <div class="mt-4 flex gap-4 text-sm">
                 <div class="flex items-center gap-2">
                     <span class="w-4 h-4 bg-red-500 rounded-full"></span>
@@ -177,6 +177,24 @@
                     <span>賣出點</span>
                 </div>
             </div>
+        </div>
+
+        <!-- MACD 圖表 -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h3 class="font-bold text-lg mb-4">📊 MACD</h3>
+            <canvas id="macdChart" height="75"></canvas>
+        </div>
+
+        <!-- RSI 圖表 -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h3 class="font-bold text-lg mb-4">📊 RSI</h3>
+            <canvas id="rsiChart" height="75"></canvas>
+        </div>
+
+        <!-- ADX 圖表 -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h3 class="font-bold text-lg mb-4">📊 ADX</h3>
+            <canvas id="adxChart" height="75"></canvas>
         </div>
 
         <!-- 策略參數 -->
@@ -583,6 +601,121 @@
                 }
             });
         }
+        
+        // MACD 圖表
+        {% if result and result.macd_data %}
+        const macdData = {{ result.macd_data | tojson }};
+        new Chart(document.getElementById('macdChart'), {
+            type: 'line',
+            data: {
+                labels: macdData.map(d => d.time),
+                datasets: [
+                    {
+                        label: 'MACD',
+                        data: macdData.map(d => d.macd),
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'transparent',
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                        tension: 0.1
+                    },
+                    {
+                        label: 'Signal',
+                        data: macdData.map(d => d.signal),
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'transparent',
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                        tension: 0.1
+                    },
+                    {
+                        label: 'Hist',
+                        data: macdData.map(d => d.hist),
+                        borderColor: '#6b7280',
+                        backgroundColor: macdData.map(d => d.hist >= 0 ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'),
+                        borderWidth: 0,
+                        pointRadius: 0,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: true, position: 'top' }
+                },
+                scales: {
+                    x: { ticks: { maxTicksLimit: 20 } },
+                    y: { title: { display: true, text: 'MACD' } }
+                }
+            }
+        });
+        {% endif %}
+        
+        // RSI 圖表
+        {% if result and result.rsi_data %}
+        const rsiData = {{ result.rsi_data | tojson }};
+        new Chart(document.getElementById('rsiChart'), {
+            type: 'line',
+            data: {
+                labels: rsiData.map(d => d.time),
+                datasets: [{
+                    label: 'RSI',
+                    data: rsiData.map(d => d.rsi),
+                    borderColor: '#8b5cf6',
+                    backgroundColor: 'transparent',
+                    borderWidth: 1.5,
+                    pointRadius: 0,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: true, position: 'top' }
+                },
+                scales: {
+                    x: { ticks: { maxTicksLimit: 20 } },
+                    y: { 
+                        min: 0, 
+                        max: 100,
+                        title: { display: true, text: 'RSI' }
+                    }
+                }
+            }
+        });
+        {% endif %}
+        
+        // ADX 圖表
+        {% if result and result.adx_data %}
+        const adxData = {{ result.adx_data | tojson }};
+        new Chart(document.getElementById('adxChart'), {
+            type: 'line',
+            data: {
+                labels: adxData.map(d => d.time),
+                datasets: [{
+                    label: 'ADX',
+                    data: adxData.map(d => d.adx),
+                    borderColor: '#10b981',
+                    backgroundColor: 'transparent',
+                    borderWidth: 1.5,
+                    pointRadius: 0,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: true, position: 'top' }
+                },
+                scales: {
+                    x: { ticks: { maxTicksLimit: 20 } },
+                    y: { title: { display: true, text: 'ADX' } }
+                }
+            }
+        });
+        {% endif %}
+        
         {% endif %}
     </script>
 </body>
