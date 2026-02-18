@@ -519,22 +519,21 @@ def run_backtest_with_params(df, params, initial_capital=100000):
         drawdown = []
         if equity_curve and len(equity_curve) > 0:
             equity_values = [e["equity"] for e in equity_curve]
-            peak = equity_values[0]
+            peak = equity_values[0]  # 初始峰值
+            current_drawdown = 0  # 當前回撤百分比
             
             for idx, eq in enumerate(equity_values):
                 # 更新峰值
-                if eq >= peak:
+                if eq > peak:
                     peak = eq
-                
-                # 計算回撤：(峰值 - 當前) / 峰值 * 100
-                if peak > 0:
-                    dd = (peak - eq) / peak * 100
-                else:
-                    dd = 0
+                    current_drawdown = 0  # 回到新高，回撤歸零
+                elif eq < peak:
+                    # 計算新回撤：(峰值 - 當前) / 峰值 * 100
+                    current_drawdown = (peak - eq) / peak * 100
                 
                 drawdown.append({
                     "time": equity_curve[idx]["time"],
-                    "drawdown": round(dd, 2)
+                    "drawdown": round(current_drawdown, 2)
                 })
         
         max_dd = 0
