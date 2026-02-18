@@ -558,8 +558,13 @@ def run_backtest_with_params(df, params, initial_capital=100000):
         
         df['RSI'] = RSIIndicator(df['Close'], window=params["rsi"]["period"]).rsi().fillna(50)
         
-        adx = ADXIndicator(df['High'], df['Low'], df['Close'], window=params["adx"]["period"])
-        df['ADX'] = adx.adx().fillna(20)  # 預設 20
+        # ADX 指標計算
+        try:
+            adx_indicator = ADXIndicator(df['High'], df['Low'], df['Close'], window=params["adx"]["period"])
+            df['ADX'] = adx_indicator.adx().fillna(20)
+            df['ADX'] = df['ADX'].clip(lower=0, upper=100)  # ADX 範圍 0-100
+        except:
+            df['ADX'] = 20
         
         atr = AverageTrueRange(df['High'], df['Low'], df['Close'], window=params["atr"]["period"])
         df['ATR'] = atr.average_true_range().fillna(df['Close'].mean() * 0.02)
