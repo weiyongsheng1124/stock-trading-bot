@@ -7,7 +7,8 @@ import shutil
 from datetime import datetime
 from config import (
     POSITIONS_FILE, TRADES_FILE, SIGNALS_FILE, 
-    LOGS_FILE, CONFIG_FILE, DATA_DIR, TradingState
+    LOGS_FILE, CONFIG_FILE, DATA_DIR, TradingState,
+    SYMBOLS_FILE, DEFAULT_SYMBOLS
 )
 
 
