@@ -42,6 +42,8 @@ class JsonManager:
     
     def _write_json(self, file_path, data):
         """寫入 JSON 文件"""
+        # 確保目錄存在
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2, default=str)
     

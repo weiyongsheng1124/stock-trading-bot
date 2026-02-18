@@ -480,12 +480,16 @@ def run_backtest(symbol, period, interval, initial_capital=100000):
     
     params = db.get_strategy_params()
     if params is None:
+        from config import STRATEGY_PARAMS
         params = STRATEGY_PARAMS
     
-    df = yf.Ticker(symbol).history(period=period, interval=interval)
+    try:
+        df = yf.Ticker(symbol).history(period=period, interval=interval)
+    except Exception as e:
+        return {"error": f"無法取得股價資料：{str(e)}"}
     
     if df is None or len(df) < 50:
-        return {"error": "無法取得足夠資料"}
+        return {"error": "無法取得足夠資料進行回測"}
     
     result = run_backtest_with_params(df, params, initial_capital)
     
@@ -493,18 +497,23 @@ def run_backtest(symbol, period, interval, initial_capital=100000):
         return result
     
     # 加入 equity_curve 和 drawdown
-    equity_values = [e["equity"] for e in result.get("equity_curve", [])]
-    if equity_values:
+    equity_curve = result.get("equity_curve", [])
+    if equity_curve and len(equity_curve) > 0:
+        equity_values = [e["equity"] for e in equity_curve]
         drawdown = []
         for i, eq in enumerate(equity_values):
             peak = max(equity_values[:i+1]) if equity_values[:i+1] else eq
             dd = (peak - eq) / peak * 100 if peak > 0 else 0
             drawdown.append({
-                "time": result["equity_curve"][i]["time"],
+                "time": equity_curve[i]["time"],
                 "drawdown": round(dd, 2)
             })
         result["drawdown"] = drawdown
         result["max_drawdown"] = round(max([d["drawdown"] for d in drawdown]) if drawdown else 0, 2)
+    else:
+        result["equity_curve"] = []
+        result["drawdown"] = []
+        result["max_drawdown"] = 0
     
     return result
 
