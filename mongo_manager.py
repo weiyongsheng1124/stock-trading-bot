@@ -5,6 +5,7 @@ from pymongo import MongoClient
 from datetime import datetime, timedelta
 from bson import ObjectId
 import config
+import urllib.parse
 
 
 class MongoManager:
@@ -20,8 +21,38 @@ class MongoManager:
         self.uri = uri or config.MONGODB_URI
         self.db_name = db_name or config.MONGODB_DB
         
-        self.client = MongoClient(self.uri)
-        self.db = self.client[self.db_name]
+        # 解析 URI 並添加 TLS 選項
+        try:
+            # 如果沒有 tlsInconsistent，添加 TLS 選項
+            if "?" not in self.uri:
+                # 標準 URI 格式
+                if "@" in self.uri:
+                    # 解析並重新組裝
+                    prefix = self.uri.split("@")[0]
+                    cluster = self.uri.split("@")[1]
+                    self.uri = f"{prefix}@cluster0.mongodb.net/?retryWrites=true&w=majority"
+            
+            # TLS/SSL 連線選項
+            tls_options = {
+                "tls": True,
+                "tlsAllowInvalidCertificates": True,  # Railway 環境需要
+                "serverSelectionTimeoutMS": 30000,
+                "connectTimeoutMS": 30000,
+                "socketTimeoutMS": 45000,
+            }
+            
+            self.client = MongoClient(self.uri, **tls_options)
+            self.db = self.client[self.db_name]
+            
+        except Exception as e:
+            # 如果失敗，嘗試不使用 TLS
+            print(f"MongoDB TLS 連線失敗，嘗試無 TLS: {e}")
+            self.client = MongoClient(
+                self.uri.replace("mongodb+srv://", "mongodb://"),
+                serverSelectionTimeoutMS=30000,
+                connectTimeoutMS=30000
+            )
+            self.db = self.client[self.db_name]
         
         # 建立索引
         self._ensure_indexes()
