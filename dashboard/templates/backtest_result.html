@@ -420,8 +420,8 @@
         
         // 股價走勢圖（買賣點標記）
         if ((buySignals && buySignals.length > 0) || (sellSignals && sellSignals.length > 0)) {
-            const buyPoints = (buySignals || []).map(b => ({x: b.time, y: b.price}));
-            const sellPoints = (sellSignals || []).map(s => ({x: s.time, y: s.price}));
+            const buyPoints = (buySignals || []).map(b => ({x: b.index, y: b.price}));
+            const sellPoints = (sellSignals || []).map(s => ({x: s.index, y: s.price}));
             
             // 股價資料
             const priceData = {{ result.price_data | tojson }};
@@ -433,7 +433,7 @@
                     datasets: [
                         {
                             label: '股價',
-                            data: priceData.map(p => p.close),
+                            data: priceData.map((p, index) => ({x: index, y: p.close})),
                             borderColor: '#374151',
                             backgroundColor: 'transparent',
                             borderWidth: 2,
@@ -476,6 +476,7 @@
                     },
                     scales: {
                         x: { 
+                            type: 'category',
                             grid: { display: false },
                             ticks: { maxTicksLimit: 20 }
                         },
