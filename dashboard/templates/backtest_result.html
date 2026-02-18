@@ -163,6 +163,22 @@
             </div>
         </div>
 
+        <!-- 股價走勢圖（買賣點標記） -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h3 class="font-bold text-lg mb-4">📈 股價走勢與買賣點</h3>
+            <canvas id="priceChart" height="300"></canvas>
+            <div class="mt-4 flex gap-4 text-sm">
+                <div class="flex items-center gap-2">
+                    <span class="w-4 h-4 bg-green-500 rounded-full"></span>
+                    <span>買入點</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-4 h-4 bg-red-500 rounded-full"></span>
+                    <span>賣出點</span>
+                </div>
+            </div>
+        </div>
+
         <!-- 策略參數 -->
         <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
             <h3 class="font-bold text-lg mb-4">⚙️ 目前使用的策略參數</h3>
@@ -330,7 +346,10 @@
         {% if result and result.equity_curve %}
         const equityData = {{ result.equity_curve | tojson }};
         const drawdownData = {{ result.drawdown | tojson }};
+        const buySignals = {{ result.buy_signals | tojson }};
+        const sellSignals = {{ result.sell_signals | tojson }};
         
+        // 資金曲線
         new Chart(document.getElementById('equityChart'), {
             type: 'line',
             data: {
@@ -351,6 +370,7 @@
             }
         });
         
+        // 回撤曲線
         new Chart(document.getElementById('drawdownChart'), {
             type: 'line',
             data: {
@@ -370,6 +390,60 @@
                 scales: { y: { position: 'right', max: 0 } }
             }
         });
+        
+        // 股價走勢圖（買賣點標記）
+        if ((buySignals && buySignals.length > 0) || (sellSignals && sellSignals.length > 0)) {
+            const buyPoints = (buySignals || []).map(b => ({x: b.time, y: b.price}));
+            const sellPoints = (sellSignals || []).map(s => ({x: s.time, y: s.price}));
+            
+            new Chart(document.getElementById('priceChart'), {
+                type: 'line',
+                data: {
+                    labels: [...new Set([...buySignals.map(b => b.time), ...sellSignals.map(s => s.time)])].sort(),
+                    datasets: [
+                        {
+                            label: '買入',
+                            data: buyPoints,
+                            backgroundColor: '#22c55e',
+                            borderColor: '#22c55e',
+                            pointStyle: 'triangle',
+                            pointRadius: 12,
+                            pointRotation: 0,
+                            showLine: false
+                        },
+                        {
+                            label: '賣出',
+                            data: sellPoints,
+                            backgroundColor: '#ef4444',
+                            borderColor: '#ef4444',
+                            pointStyle: 'triangle',
+                            pointRadius: 12,
+                            pointRotation: 180,
+                            showLine: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    if (context.dataset.label === '買入') return `買入: $${context.parsed.y}`;
+                                    if (context.dataset.label === '賣出') return `賣出: $${context.parsed.y}`;
+                                    return `$${context.parsed.y}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { maxTicksLimit: 10 } },
+                        y: { position: 'right' }
+                    }
+                }
+            });
+        }
         {% endif %}
     </script>
 </body>

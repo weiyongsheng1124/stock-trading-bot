@@ -432,6 +432,8 @@ def run_backtest_with_params(df, params, initial_capital=100000):
         position = 0
         trades = []
         equity_curve = []
+        buy_signals = []  # 買入點
+        sell_signals = []  # 賣出點
         
         for i in range(30, len(df)):
             # 記錄資金曲線
@@ -450,18 +452,34 @@ def run_backtest_with_params(df, params, initial_capital=100000):
                 entry_date = df.index[i]
                 position = 1
                 
+                # 記錄買入點
+                buy_signals.append({
+                    "time": str(entry_date.date()),
+                    "price": round(entry_price, 2),
+                    "index": i
+                })
+                
             elif df.iloc[i]['DC'] and position == 1:
                 exit_price = df['Close'].iloc[i]
+                exit_date = df.index[i]
                 pnl = (exit_price - entry_price) / entry_price * 100
                 
                 trades.append({
                     "id": len(trades) + 1,
                     "entry_date": str(entry_date.date()),
-                    "exit_date": str(df.index[i].date()),
+                    "exit_date": str(exit_date.date()),
                     "entry_price": round(entry_price, 2),
                     "exit_price": round(exit_price, 2),
                     "pnl": round(pnl, 2),
                     "win": pnl > 0
+                })
+                
+                # 記錄賣出點
+                sell_signals.append({
+                    "time": str(exit_date.date()),
+                    "price": round(exit_price, 2),
+                    "index": i,
+                    "pnl": round(pnl, 2)
                 })
                 
                 capital = shares * exit_price
@@ -481,6 +499,8 @@ def run_backtest_with_params(df, params, initial_capital=100000):
             "total_return": round((capital - initial_capital) / initial_capital * 100, 2),
             "trades": trades,
             "equity_curve": equity_curve,
+            "buy_signals": buy_signals,
+            "sell_signals": sell_signals,
             "final_capital": round(capital, 2),
             "params": params
         }
