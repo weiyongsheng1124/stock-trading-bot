@@ -240,6 +240,10 @@ def backtest():
                 "confirm_bars": int(request.form.get('confirm_bars', 3)),
                 "stop_loss_multiplier": float(request.form.get('stop_loss_multiplier', 2.0))
             }
+            
+            # 儲存參數到資料庫
+            db.save_strategy_params(params)
+            
         else:
             params = db.get_strategy_params() or STRATEGY_PARAMS
         
