@@ -406,18 +406,19 @@ def run_backtest_with_params(df, params, initial_capital=100000):
                 "close": round(float(df['Close'].iloc[i]), 2)
             })
         
+        # 計算 MACD
         macd = MACD(df['Close'], 
                      window_slow=params["macd"]["slow"],
                      window_fast=params["macd"]["fast"], 
                      window_sign=params["macd"]["signal"])
-        df['MACD'] = macd.macd()
-        df['MACD_Signal'] = macd.macd_signal()
-        df['MACD_Hist'] = macd.macd_diff()
+        df['MACD'] = macd.macd().fillna(0)  # NaN 填為 0
+        df['MACD_Signal'] = macd.macd_signal().fillna(0)
+        df['MACD_Hist'] = macd.macd_diff().fillna(0)
         
-        df['RSI'] = RSIIndicator(df['Close'], window=params["rsi"]["period"]).rsi()
+        df['RSI'] = RSIIndicator(df['Close'], window=params["rsi"]["period"]).rsi().fillna(50)
         
         atr = AverageTrueRange(df['High'], df['Low'], df['Close'], window=params["atr"]["period"])
-        df['ATR'] = atr.average_true_range()
+        df['ATR'] = atr.average_true_range().fillna(df['Close'].mean() * 0.02)
         
         # 買賣訊號
         df['GC'] = (df['MACD'] > df['MACD_Signal']) & (df['MACD'].shift(1) <= df['MACD_Signal'].shift(1))
