@@ -480,12 +480,11 @@ def run_backtest_with_params(df, params, initial_capital=100000):
             
             # 買入訊號
             if df.iloc[i]['GC_Confirm'] and position == 0:
-                # 計算買入股數（基於初始資金的50%）
-                buy_amount = initial_capital_float * position_size
+                # 用當時的全部資金買入
                 if current_price > 0:
-                    shares = int(buy_amount // current_price)
+                    shares = int(cash // current_price)
                     cost = shares * current_price
-                    cash = initial_capital_float - cost  # 剩下的是現金
+                    cash = cash - cost  # 剩下的是現金
                 entry_price = current_price
                 entry_date = df.index[i]
                 position = 1
@@ -524,8 +523,8 @@ def run_backtest_with_params(df, params, initial_capital=100000):
                     "pnl": float(round(pnl_pct, 2))
                 })
                 
-                # 賣出股票，回收現金
-                cash = shares * exit_price + (initial_capital_float - shares * entry_price)
+                # 賣出股票，回收全部資金
+                cash = cash + shares * exit_price
                 shares = 0
                 position = 0
         
