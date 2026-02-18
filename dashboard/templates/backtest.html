@@ -68,15 +68,22 @@
                            class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
 
-                <!-- 覆蓋策略參數 -->
+                <!-- 策略選擇 -->
                 <div class="mb-6">
-                    <label class="flex items-center cursor-pointer">
-                        <input type="checkbox" name="override" value="true" 
-                               class="mr-2" onchange="toggleParams(this.checked)">
-                        <span class="font-bold text-gray-700">覆蓋策略參數</span>
-                    </label>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">使用策略</label>
+                    <select name="strategy_type" id="strategy_type" onchange="toggleStrategyParams(this.value)"
+                            class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="default">🔧 全局預設策略</option>
+                        {% if all_params %}
+                        {% for s, data in all_params.items() %}
+                        <option value="symbol">⭐ {{ s }} 個別策略</option>
+                        {% endfor %}
+                        {% endif %}
+                        <option value="custom">📝 自訂參數</option>
+                    </select>
                 </div>
 
+                <!-- 自訂參數區塊 -->
                 <div id="params-section" class="hidden grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
                     <div>
                         <label class="block text-gray-600 text-xs mb-1">MACD Fast</label>
@@ -134,17 +141,19 @@
         <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
             <h3 class="font-bold text-blue-800 mb-2">📖 回測說明</h3>
             <ul class="text-sm text-blue-700 space-y-1">
+                <li>• 🔧 全局預設策略：使用預設的 MACD/RSI/ADX/ATR 參數</li>
+                <li>• ⭐ 個別策略：使用該股票自訂的參數（在策略配置頁面設定）</li>
+                <li>• 📝 自訂參數：可自行調整參數，會儲存為該股票的個別策略</li>
                 <li>• 買入條件：MACD 黃金交叉 + 確認 3 根 K 棒 DIF 持續在 DEA 上方</li>
                 <li>• 賣出條件：MACD 死亡交叉</li>
                 <li>• 風控：停損 = 買入價 - 2 × ATR</li>
-                <li>• 回測結果僅供參考，過去績效不代表未來表現</li>
             </ul>
         </div>
     </div>
 
     <script>
-        function toggleParams(checked) {
-            document.getElementById('params-section').classList.toggle('hidden', !checked);
+        function toggleStrategyParams(value) {
+            document.getElementById('params-section').classList.toggle('hidden', value !== 'custom');
         }
     </script>
 </body>

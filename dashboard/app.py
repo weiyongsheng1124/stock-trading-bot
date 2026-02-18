@@ -320,7 +320,20 @@ def backtest():
         period = request.form.get('period', '6mo')
         interval = request.form.get('interval', '1d')
         initial_capital = int(request.form.get('initial_capital', 100000))
+        strategy_type = request.form.get('strategy_type', 'default')
         
+        if strategy_type == 'symbol':
+            # 使用該股票的個別策略
+            symbol_params = db.get_symbol_params(symbol)
+            if symbol_params:
+                params = symbol_params
+            else:
+                params = db.get_strategy_params() or STRATEGY_PARAMS
+        else:
+            # 使用全局策略
+            params = db.get_strategy_params() or STRATEGY_PARAMS
+        
+        # 如果有override參數，使用表單中的值
         if 'override' in request.form:
             params = {
                 "macd": {
@@ -344,11 +357,8 @@ def backtest():
                 "stop_loss_multiplier": float(request.form.get('stop_loss_multiplier', 2.0))
             }
             
-            # 儲存參數到資料庫
-            db.save_strategy_params(params)
-            
-        else:
-            params = db.get_strategy_params() or STRATEGY_PARAMS
+            # 儲存為該股票的個別策略
+            db.save_symbol_params(symbol, params)
         
         return redirect(url_for('backtest_result', 
                               symbol=symbol, 
@@ -357,7 +367,12 @@ def backtest():
                               capital=initial_capital))
     
     symbols = db.get_monitor_symbols()
-    return render_template('backtest.html', symbols=symbols, params=STRATEGY_PARAMS)
+    all_params = db.get_all_symbol_params()
+    default_params = db.get_strategy_params() or STRATEGY_PARAMS
+    return render_template('backtest.html', 
+                         symbols=symbols, 
+                         params=default_params,
+                         all_params=all_params)
 
 
 @app.route('/backtest/result')
