@@ -1,21 +1,28 @@
 """
-系統配置
+股票交易機器人配置文件
 """
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
-# ============ MongoDB 配置 ============
-MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
-MONGODB_DB = os.getenv("MONGODB_DB", "stock_trading")
+# ============ JSON 文件路徑 ============
+DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+POSITIONS_FILE = os.path.join(DATA_DIR, "positions.json")
+TRADES_FILE = os.path.join(DATA_DIR, "trades.json")
+SIGNALS_FILE = os.path.join(DATA_DIR, "signals.json")
+LOGS_FILE = os.path.join(DATA_DIR, "logs.json")
+CONFIG_FILE = os.path.join(DATA_DIR, "strategy_config.json")
+
+# 確保數據目錄存在
+os.makedirs(DATA_DIR, exist_ok=True)
 
 # ============ Telegram 配置 ============
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
-# ============ 交易配置 ============
+# ============ 監控股票清單 ============
 TRADING_CONFIG = {
-    "symbols": ["2330.TW", "8110.TW", "2337.TW"],  # 監控股票清單
-    "interval_seconds": 300,  # 5分鐘
+    "symbols": ["2330.TW", "8110.TW", "2337.TW"],
+    "check_interval_seconds": 300,  # 5分鐘
     "trading_hours": {
         "start": "09:00",
         "end": "13:30",
@@ -27,8 +34,8 @@ TRADING_CONFIG = {
 # ============ 策略參數 ============
 STRATEGY_PARAMS = {
     "macd": {
-        "fast": 12,
-        "slow": 26,
+        "fast": 8,
+        "slow": 20,
         "signal": 9
     },
     "rsi": {
@@ -44,8 +51,8 @@ STRATEGY_PARAMS = {
         "period": 14
     },
     "confirm_bars": 3,  # DIF > DEA 確認棒數
-    "stop_loss_multiplier": 2.0,  # 停損 = 2 * ATR
-    "new_high_period": 252  # 近一年新高 (約252交易日)
+    "stop_loss_multiplier": 2.0,
+    "new_high_period": 252  # 近一年新高
 }
 
 # ============ 狀態機 ============
@@ -56,18 +63,8 @@ class TradingState:
     SIGNAL_SELL_SENT = "SIGNAL_SELL_SENT" # 已發送賣出訊號
     COOLDOWN = "COOLDOWN"                 # 冷卻中
 
-# ============ 冷卻時間（賣出後隔日才能再買）===========
-COOLDOWN_HOURS = 24  # 小時
+# ============ 冷卻時間 ============
+COOLDOWN_HOURS = 24
 
 # ============ 黃金交叉確認 ============
-# 第0根：發生交叉
-# 第1,2,3根：DIF > DEA
 GOLDEN_CROSS_CONFIRM_BARS = 3
-
-# ============ API 配置 ============
-STOCK_API_CONFIG = {
-    "yfinance": {
-        "period": "1mo",
-        "interval": "5m"
-    }
-}

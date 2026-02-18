@@ -7,7 +7,7 @@
 - 🛡️ ATR 停損風控
 - 📱 Telegram 通知
 - 🌐 Web Dashboard
-- 💾 MongoDB 資料儲存
+- 💾 **JSON 檔案儲存**（無需 MongoDB）
 
 ---
 
@@ -24,10 +24,6 @@ pip install -r requirements.txt
 建立 `.env` 檔案：
 
 ```env
-# MongoDB
-MONGODB_URI=mongodb://localhost:27017
-MONGODB_DB=stock_trading
-
 # Telegram (可選)
 TELEGRAM_TOKEN=your_bot_token
 TELEGRAM_CHAT_ID=your_chat_id
@@ -49,16 +45,21 @@ python dashboard/app.py
 
 ```
 stock-trading-bot/
-├── bot.py                 # 主程式（交易邏輯）
-├── config.py              # 設定檔
-├── indicators.py          # 技術指標計算
-├── mongo_manager.py       # MongoDB 操作
-├── telegram_bot.py        # Telegram 機器人
-├── requirements.txt       # 依賴套件
-├── dashboard/
-│   ├── app.py           # Flask 伺服器
-│   └── templates/        # HTML 範本
-└── README.md
+├── bot.py              # 主程式（交易邏輯）
+├── config.py           # 設定檔
+├── indicators.py        # 技術指標計算
+├── json_manager.py      # JSON 檔案管理（取代 MongoDB）
+├── telegram_bot.py      # Telegram 機器人
+├── requirements.txt     # 依賴套件
+├── data/               # JSON 數據儲存目錄（自動建立）
+│   ├── positions.json  # 持倉記錄
+│   ├── trades.json     # 交易紀錄
+│   ├── signals.json    # 訊號紀錄
+│   ├── logs.json       # 系統日誌
+│   └── strategy_config.json # 策略配置
+└── dashboard/
+    └── app.py          # Flask 伺服器
+    └── templates/      # HTML 範本
 ```
 
 ---
@@ -97,68 +98,11 @@ stock-trading-bot/
 
 ## 🌐 Web Dashboard
 
-### 即時監控頁 (/)
-- 查看持倉狀態
-- 交易紀錄
-- 系統日誌
-
-### 策略配置頁 (/config)
-- 調整 MACD 參數
-- 調整 RSI 參數
-- 調整 ADX 參數
-- 調整風控參數
-
-### 回測頁 (/backtest)
-- 輸入股票代碼
-- 選擇回測期間
-- 查看回測結果
-
----
-
-## 🖥️ Railway 部署
-
-### 1. 安裝 Railway CLI
-
-```bash
-npm i -g @railway/cli
-```
-
-### 2. 登入並建立專案
-
-```bash
-railway login
-railway init
-```
-
-### 3. 設定環境變數
-
-在 Railway Dashboard 點擊 **Variables** 頁籤，新增：
-
-```
-MONGODB_URI=mongodb+srv://...
-TELEGRAM_TOKEN=your_bot_token
-TELEGRAM_CHAT_ID=your_chat_id
-```
-
-### 4. 部署
-
-```bash
-railway up
-```
-
-### 5. 啟動服務
-
-在 Railway Dashboard 的 **Settings** → **Start Command** 設定：
-
-```
-python bot.py
-```
-
-如需 Web Dashboard，另建立一個服務：
-
-```
-python dashboard/app.py
-```
+| 頁面 | URL |
+|------|-----|
+| 即時監控 | `/` 或 `/monitor` |
+| 策略配置 | `/config` |
+| 回測 | `/backtest` |
 
 ---
 
@@ -191,13 +135,17 @@ NO_POSITION (無持倉)
 
 ## 📝 更新日誌
 
+### v1.1.0 (2026-02-18)
+- **改用 JSON 檔案儲存**（無需 MongoDB）
+- 簡化部署流程
+- 新增 Railway 部署支援
+
 ### v1.0.0 (2026-02-18)
 - 初始版本
 - MACD 策略
 - Telegram 通知
 - Web Dashboard
-- MongoDB 儲存
 
 ---
 
-如有問題，請聯繫開發者。
+**GitHub**: https://github.com/weiyongsheng1124/stock-trading-bot
