@@ -275,9 +275,14 @@
 
         // ============ 圖表載入 ============
         {% for symbol in symbols %}
+        console.log('載入 {{ symbol }}...');
         fetch('/api/live_chart/{{ symbol }}')
-            .then(r => r.json())
+            .then(r => {
+                console.log('{{ symbol }} 回應狀態:', r.status);
+                return r.json();
+            })
             .then(data => {
+                console.log('{{ symbol }} 資料:', data);
                 if (data.error) {
                     document.getElementById('status-{{ symbol }}').innerText = '❌ ' + (data.error || '載入失敗');
                     document.getElementById('status-{{ symbol }}').className = 'text-sm px-3 py-1 rounded bg-red-600 text-white';
