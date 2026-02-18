@@ -268,16 +268,11 @@
             .then(data => {
                 if (data.success) {
                     loadSymbols();
-                    location.reload();
-                }
-            });
-        }
 
         // ============ 圖表載入 ============
         {% for symbol in symbols %}
-        console.log('載入 {{ symbol }}...');
-        
         (function() {
+            console.log('載入 {{ symbol }}...');
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000);
             
@@ -291,146 +286,117 @@
                 .then(data => {
                     clearTimeout(timeoutId);
                     console.log('{{ symbol }} 資料:', data);
-                if (data.error) {
-                    document.getElementById('status-{{ symbol }}').innerText = '❌ ' + (data.error || '載入失敗');
-                    document.getElementById('status-{{ symbol }}').className = 'text-sm px-3 py-1 rounded bg-red-600 text-white';
-                    return;
-                }
-                
-                // 更新狀態
-                const statusEl = document.getElementById('status-{{ symbol }}');
-                if (data.position_status === 'HOLDING') {
-                    statusEl.innerText = '🟡 持有中';
-                    statusEl.className = 'text-sm px-3 py-1 rounded bg-yellow-500 text-white';
-                } else if (data.position_status) {
-                    statusEl.innerText = '📡 ' + data.position_status;
-                } else {
-                    statusEl.innerText = '✅ 監控中';
-                    statusEl.className = 'text-sm px-3 py-1 rounded bg-green-600 text-white';
-                }
-                
-                // 更新持倉資訊
-                if (data.entry_price || data.stop_loss) {
-                    document.getElementById('holding-{{ symbol }}').classList.remove('hidden');
-                    if (data.entry_price) document.getElementById('entry-{{ symbol }}').innerText = data.entry_price;
-                    if (data.stop_loss) document.getElementById('stop-{{ symbol }}').innerText = data.stop_loss;
-                    document.getElementById('position-status-{{ symbol }}').innerText = data.position_status || '無';
-                }
-                
-                const candles = data.candles;
-                if (!candles || candles.length === 0) {
-                    document.getElementById('status-{{ symbol }}').innerText = '⚠️ 無K線資料';
-                    document.getElementById('status-{{ symbol }}').className = 'text-sm px-3 py-1 rounded bg-yellow-600 text-white';
-                    return;
-                }
-                
-                const times = candles.map(c => c.time.split(' ')[1]);
-                const opens = candles.map(c => c.open);
-                const highs = candles.map(c => c.high);
-                const lows = candles.map(c => c.low);
-                const closes = candles.map(c => c.close);
-                
-                // K線圖
-                const chartCtx = document.getElementById('chart-{{ symbol }}').getContext('2d');
-                
-                // 準備K線資料
-                const candleData = candles.map(c => ({
-                    x: c.time,
-                    o: c.open,
-                    h: c.high,
-                    l: c.low,
-                    c: c.close
-                }));
-                
-                new Chart(chartCtx, {
-                    type: 'line',
-                    data: {
-                        labels: times,
-                        datasets: [{
-                            label: '價格',
-                            data: closes,
-                            borderColor: '#2563eb',
-                            backgroundColor: closes.map((c, i) => i > 0 && c >= opens[i] ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'),
-                            fill: false,
-                            tension: 0
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: { legend: { display: false } },
-                        scales: {
-                            x: { grid: { display: false } },
-                            y: { position: 'right' }
+                    
+                    if (data.error) {
+                        document.getElementById('status-{{ symbol }}').innerText = '❌ ' + (data.error || '載入失敗');
+                        document.getElementById('status-{{ symbol }}').className = 'text-sm px-3 py-1 rounded bg-red-600 text-white';
+                        return;
+                    }
+                    
+                    // 更新狀態
+                    const statusEl = document.getElementById('status-{{ symbol }}');
+                    if (data.position_status === 'HOLDING') {
+                        statusEl.innerText = '🟡 持有中';
+                        statusEl.className = 'text-sm px-3 py-1 rounded bg-yellow-500 text-white';
+                    } else if (data.position_status) {
+                        statusEl.innerText = '📡 ' + data.position_status;
+                    } else {
+                        statusEl.innerText = '✅ 監控中';
+                        statusEl.className = 'text-sm px-3 py-1 rounded bg-green-600 text-white';
+                    }
+                    
+                    // 更新持倉資訊
+                    if (data.entry_price || data.stop_loss) {
+                        document.getElementById('holding-{{ symbol }}').classList.remove('hidden');
+                        if (data.entry_price) document.getElementById('entry-{{ symbol }}').innerText = data.entry_price;
+                        if (data.stop_loss) document.getElementById('stop-{{ symbol }}').innerText = data.stop_loss;
+                        document.getElementById('position-status-{{ symbol }}').innerText = data.position_status || '無';
+                    }
+                    
+                    const candles = data.candles;
+                    if (!candles || candles.length === 0) {
+                        document.getElementById('status-{{ symbol }}').innerText = '⚠️ 無K線資料';
+                        document.getElementById('status-{{ symbol }}').className = 'text-sm px-3 py-1 rounded bg-yellow-600 text-white';
+                        return;
+                    }
+                    
+                    const times = candles.map(c => c.time.split(' ')[1]);
+                    const opens = candles.map(c => c.open);
+                    const highs = candles.map(c => c.high);
+                    const lows = candles.map(c => c.low);
+                    const closes = candles.map(c => c.close);
+                    
+                    // K線圖
+                    new Chart(document.getElementById('chart-{{ symbol }}'), {
+                        type: 'line',
+                        data: {
+                            labels: times,
+                            datasets: [{
+                                label: '價格',
+                                data: closes,
+                                borderColor: '#2563eb',
+                                fill: false,
+                                tension: 0
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: { legend: { display: false } },
+                            scales: { x: { display: false }, y: { position: 'right' } }
                         }
-                    }
+                    });
+                    
+                    // MACD
+                    new Chart(document.getElementById('macd-{{ symbol }}'), {
+                        type: 'line',
+                        data: {
+                            labels: times,
+                            datasets: [
+                                { label: 'MACD', data: candles.map(c => c.macd), borderColor: '#2563eb', tension: 0.1 },
+                                { label: 'Signal', data: candles.map(c => c.macd_signal), borderColor: '#dc2626', tension: 0.1 }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: { legend: { position: 'top' } },
+                            scales: { y: { position: 'right' } }
+                        }
+                    });
+                    
+                    // RSI
+                    new Chart(document.getElementById('rsi-{{ symbol }}'), {
+                        type: 'line',
+                        data: {
+                            labels: times,
+                            datasets: [{ label: 'RSI', data: candles.map(c => c.rsi), borderColor: '#7c3aed', borderWidth: 1, fill: false, tension: 0.1 }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: { legend: { display: false } },
+                            scales: { y: { min: 0, max: 100, position: 'right' } }
+                        }
+                    });
+                    
+                    // ADX
+                    new Chart(document.getElementById('adx-{{ symbol }}'), {
+                        type: 'line',
+                        data: {
+                            labels: times,
+                            datasets: [{ label: 'ADX', data: candles.map(c => c.adx), borderColor: '#059669', borderWidth: 1, fill: false, tension: 0.1 }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: { legend: { display: false } },
+                            scales: { y: { min: 0, max: 100, position: 'right' } }
+                        }
+                    });
+                })
+                .catch(err => {
+                    clearTimeout(timeoutId);
+                    console.error('{{ symbol }} 載入失敗:', err);
+                    document.getElementById('status-{{ symbol }}').innerText = '❌ ' + err.message;
+                    document.getElementById('status-{{ symbol }}').className = 'text-sm px-3 py-1 rounded bg-red-600 text-white';
                 });
-                
-                // MACD
-                new Chart(document.getElementById('macd-{{ symbol }}'), {
-                    type: 'line',
-                    data: {
-                        labels: times,
-                        datasets: [
-                            { label: 'MACD', data: candles.map(c => c.macd), borderColor: '#2563eb', tension: 0.1 },
-                            { label: 'Signal', data: candles.map(c => c.macd_signal), borderColor: '#dc2626', tension: 0.1 }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: { legend: { position: 'top' } },
-                        scales: { y: { position: 'right' } }
-                    }
-                });
-                
-                // RSI
-                new Chart(document.getElementById('rsi-{{ symbol }}'), {
-                    type: 'line',
-                    data: {
-                        labels: times,
-                        datasets: [{ 
-                            label: 'RSI', 
-                            data: candles.map(c => c.rsi), 
-                            borderColor: '#7c3aed',
-                            borderWidth: 1,
-                            fill: false,
-                            tension: 0.1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: { legend: { display: false } },
-                        scales: { y: { min: 0, max: 100, position: 'right' } }
-                    }
-                });
-                
-                // ADX
-                new Chart(document.getElementById('adx-{{ symbol }}'), {
-                    type: 'line',
-                    data: {
-                        labels: times,
-                        datasets: [{ 
-                            label: 'ADX', 
-                            data: candles.map(c => c.adx), 
-                            borderColor: '#059669',
-                            borderWidth: 1,
-                            fill: false,
-                            tension: 0.1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: { legend: { display: false } },
-                        scales: { y: { min: 0, max: 100, position: 'right' } }
-                    }
-                });
-                });
-            })
-            .catch(err => {
-                clearTimeout(timeoutId);
-                console.error('{{ symbol }} 載入失敗:', err);
-                document.getElementById('status-{{ symbol }}').innerText = '❌ ' + err.message;
-                document.getElementById('status-{{ symbol }}').className = 'text-sm px-3 py-1 rounded bg-red-600 text-white';
-            });
         })();
         {% endfor %}
 
