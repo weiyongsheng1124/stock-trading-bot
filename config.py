@@ -19,6 +19,9 @@ os.makedirs(DATA_DIR, exist_ok=True)
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
+# ============ 控制開關 ============
+ENABLE_TELEGRAM_BOT = os.getenv("ENABLE_TELEGRAM_BOT", "false").lower() == "true"
+
 # ============ 監控股票清單 ============
 TRADING_CONFIG = {
     "symbols": ["2330.TW", "8110.TW", "2337.TW"],

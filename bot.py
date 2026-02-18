@@ -35,15 +35,17 @@ class StockTradingBot:
         self.is_running = False
         self.check_interval = TRADING_CONFIG["check_interval_seconds"]
         
-        # 初始化 Telegram Bot
+        # 初始化 Telegram Bot（如果 ENABLE_TELEGRAM_BOT=true）
         self.bot = None
-        if TELEGRAM_TOKEN and TELEGRAM_CHAT_ID:
+        if ENABLE_TELEGRAM_BOT and TELEGRAM_TOKEN and TELEGRAM_CHAT_ID:
             try:
                 from telegram_bot import TradingBot
                 self.bot = TradingBot(TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, self.db)
                 logger.info("Telegram Bot 已初始化")
             except Exception as e:
                 logger.warning(f"Telegram Bot 初始化失敗: {e}")
+        elif TELEGRAM_TOKEN and TELEGRAM_CHAT_ID:
+            logger.info("Telegram Bot 未啟動 (ENABLE_TELEGRAM_BOT=false)")
     
     def is_trading_hours(self):
         """檢查是否在交易時間"""
@@ -289,10 +291,12 @@ class StockTradingBot:
         
         self.is_running = True
         
-        # 啟動 Telegram Bot
-        if self.bot:
+        # 啟動 Telegram Bot (僅當 ENABLE_TELEGRAM_BOT=true)
+        if self.bot and ENABLE_TELEGRAM_BOT:
             logger.info("啟動 Telegram Bot...")
             self.bot.run()
+        else:
+            logger.info("Telegram Bot 模式: polling 已禁用 (使用 Webhook 或單一實例)")
         
         # 主迴圈
         while self.is_running:
