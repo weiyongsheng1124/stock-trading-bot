@@ -5,6 +5,7 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for
 from flask_cors import CORS
 import sys
 import os
+import json
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -342,11 +343,16 @@ def backtest():
             # 儲存為該股票的個別策略
             db.save_symbol_params(symbol, params)
         
+        # 將使用的參數序列化為 URL 參數
+        import urllib.parse
+        params_json = urllib.parse.quote(json.dumps(params))
+        
         return redirect(url_for('backtest_result', 
                               symbol=symbol, 
                               period=period, 
                               interval=interval,
-                              capital=initial_capital))
+                              capital=initial_capital,
+                              params_data=params_json))
     
     symbols = db.get_monitor_symbols()
     all_params = db.get_all_symbol_params()
@@ -363,22 +369,19 @@ def backtest_result():
     period = request.args.get('period', '6mo')
     interval = request.args.get('interval', '1d')
     initial_capital = int(request.args.get('capital', 100000))
-    use_symbol_params = request.args.get('use_symbol_params', 'false').lower() == 'true'
+    params_data = request.args.get('params_data')
     
     if not symbol:
         return redirect(url_for('backtest'))
     
     try:
-        # 如果使用個別股票參數，先取得再執行回測
-        params = None
-        if use_symbol_params:
-            symbol_params = db.get_symbol_params(symbol)
-            if symbol_params:
-                params = symbol_params
-        
-        if params:
+        # 如果 URL 有傳遞參數，直接使用
+        if params_data:
+            import urllib.parse
+            params = json.loads(urllib.parse.unquote(params_data))
             result = run_backtest(symbol, period, interval, initial_capital, params)
         else:
+            # 否則執行回測（使用預設參數）
             result = run_backtest(symbol, period, interval, initial_capital)
     except Exception as e:
         result = {"error": f"回測發生錯誤：{str(e)}"}
