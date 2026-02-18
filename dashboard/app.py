@@ -447,7 +447,7 @@ def run_backtest_with_params(df, params, initial_capital=100000):
         shares = 0
         position = 0
         trades = []
-        equity_curve = []  # 資金曲線
+        equity_curve = []  # 資金曲線（相對於初始資金的比例）
         buy_signals = []  # 買入點
         sell_signals = []  # 賣出點
         
@@ -458,22 +458,26 @@ def run_backtest_with_params(df, params, initial_capital=100000):
             current_price = float(df['Close'].iloc[i])
             current_time = str(df.index[i].date())
             
-            # 記錄資金（每天都記錄）
+            # 記錄資金（每天都記錄，相對於初始資金的比例）
             if position:
                 current_equity = shares * current_price
             else:
                 current_equity = capital
             
+            # 記錄為相對於初始資金的比例 (%)
+            equity_pct = (current_equity - capital) / capital * 100 if capital > 0 else 0
             equity_curve.append({
                 "time": current_time,
-                "equity": round(current_equity, 2)
+                "equity": round(current_equity, 2),
+                "equity_pct": round(equity_pct, 2)
             })
             
             # 買入訊號
             if df.iloc[i]['GC_Confirm'] and position == 0:
-                # 計算買入數量
+                # 計算買入股數（固定比例：50% 倉位）
+                position_size = 0.5  # 50% 倉位
                 if current_price > 0:
-                    shares = int(capital // current_price)
+                    shares = int((capital * position_size) // current_price)
                 entry_price = current_price
                 entry_date = df.index[i]
                 position = 1
@@ -520,25 +524,32 @@ def run_backtest_with_params(df, params, initial_capital=100000):
         winning = [t for t in trades if t.get("win") is True or t.get("win") == "true"]
         win_rate = len(winning) / total * 100 if total > 0 else 0
         
-        # 計算回撤曲線
+        # 計算總報酬率（基於最後一天的資金變化）
+        if equity_curve:
+            final_equity_pct = equity_curve[-1].get("equity_pct", 0)
+        else:
+            final_equity_pct = 0
+        
+        # 計算回撤曲線（基於 equity_pct）
         drawdown = []
         if equity_curve and len(equity_curve) > 0:
-            equity_values = [e["equity"] for e in equity_curve]
-            peak = equity_values[0]  # 初始峰值
-            current_drawdown = 0  # 當前回撤百分比
+            peak_pct = 0  # 峰值%（從0開始）
+            current_dd = 0  # 當前回撤%
             
-            for idx, eq in enumerate(equity_values):
+            for item in equity_curve:
+                equity_pct = item.get("equity_pct", 0)
+                
                 # 更新峰值
-                if eq > peak:
-                    peak = eq
-                    current_drawdown = 0  # 回到新高，回撤歸零
-                elif eq < peak:
-                    # 計算新回撤：(峰值 - 當前) / 峰值 * 100
-                    current_drawdown = (peak - eq) / peak * 100
+                if equity_pct >= peak_pct:
+                    peak_pct = equity_pct
+                    current_dd = 0  # 回到高點，回撤歸零
+                elif equity_pct < peak_pct:
+                    # 計算新回撤
+                    current_dd = peak_pct - equity_pct
                 
                 drawdown.append({
-                    "time": equity_curve[idx]["time"],
-                    "drawdown": round(current_drawdown, 2)
+                    "time": item["time"],
+                    "drawdown": round(current_dd, 2)
                 })
         
         max_dd = 0
@@ -550,7 +561,7 @@ def run_backtest_with_params(df, params, initial_capital=100000):
             "wins": len(winning),
             "losses": total - len(winning),
             "win_rate": round(win_rate, 2),
-            "total_return": round((capital - initial_capital) / initial_capital * 100, 2),
+            "total_return": round(final_equity_pct, 2),
             "trades": trades,
             "equity_curve": equity_curve,
             "buy_signals": buy_signals,
@@ -558,7 +569,7 @@ def run_backtest_with_params(df, params, initial_capital=100000):
             "price_data": price_data,
             "drawdown": drawdown,
             "max_drawdown": round(max_dd, 2),
-            "final_capital": round(capital, 2),
+            "final_capital": round(equity_curve[-1]["equity"] if equity_curve else capital, 2),
             "params": params
         }
         

@@ -352,14 +352,14 @@
         console.log('Equity data length:', equityData.length);
         console.log('Drawdown data:', drawdownData);
         
-        // 資金曲線
+        // 資金曲線（使用百分比）
         new Chart(document.getElementById('equityChart'), {
             type: 'line',
             data: {
                 labels: equityData.map(d => d.time),
                 datasets: [{
-                    label: '資金',
-                    data: equityData.map(d => d.equity),
+                    label: '資金變化%',
+                    data: equityData.map(d => d.equity_pct),
                     borderColor: '#2563eb',
                     backgroundColor: 'rgba(37, 99, 235, 0.1)',
                     fill: true,
@@ -368,8 +368,22 @@
             },
             options: {
                 responsive: true,
-                plugins: { legend: { display: false } },
-                scales: { y: { position: 'right' } }
+                plugins: { 
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return '變化: ' + context.parsed.y.toFixed(2) + '%';
+                            }
+                        }
+                    }
+                },
+                scales: { 
+                    y: { 
+                        position: 'right',
+                        title: { display: true, text: '變化 %' }
+                    }
+                }
             }
         });
         
