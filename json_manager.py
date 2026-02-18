@@ -25,6 +25,11 @@ class JsonManager:
                 with open(file_path, 'w', encoding='utf-8') as f:
                     json.dump([], f)
         
+        # 確保監控股票文件存在
+        if not os.path.exists(SYMBOLS_FILE):
+            with open(SYMBOLS_FILE, 'w', encoding='utf-8') as f:
+                json.dump({"symbols": DEFAULT_SYMBOLS}, f, ensure_ascii=False)
+        
         # 讀取策略配置
         if not os.path.exists(CONFIG_FILE):
             from config import STRATEGY_PARAMS
