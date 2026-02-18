@@ -349,7 +349,10 @@ class JsonManager:
     
     def get_all_symbol_params(self):
         """取得所有股票的個別參數"""
-        return self._symbol_params_cache.copy()
+        try:
+            return self._symbol_params_cache.copy()
+        except:
+            return {}
     
     def delete_symbol_params(self, symbol):
         """刪除個別股票的策略參數"""

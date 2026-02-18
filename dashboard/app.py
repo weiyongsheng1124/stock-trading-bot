@@ -740,7 +740,9 @@ def not_found(e):
 
 @app.errorhandler(500)
 def server_error(e):
-    return render_template('error.html', error="500 - 伺服器錯誤"), 500
+    import traceback
+    print("500錯誤:", traceback.format_exc())
+    return render_template('error.html', error="500 - 伺服器錯誤\n" + str(e)), 500
 
 
 if __name__ == '__main__':
