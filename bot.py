@@ -14,7 +14,7 @@ import os
 from config import (
     TRADING_CONFIG, STRATEGY_PARAMS, TradingState,
     GOLDEN_CROSS_CONFIRM_BARS, COOLDOWN_HOURS, 
-    TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, ENABLE_TELEGRAM_BOT
+    TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, ENABLE_TELEGRAM_BOT, DEFAULT_SYMBOLS
 )
 from indicators import TechnicalIndicators
 from json_manager import JsonManager
@@ -32,8 +32,12 @@ class StockTradingBot:
     
     def __init__(self):
         self.indicators = TechnicalIndicators(STRATEGY_PARAMS)
+        # 從 JSON 取得監控股票清單
+        from json_manager import JsonManager
         self.db = JsonManager()
-        self.is_running = False
+        self.symbols = self.db.get_monitor_symbols()
+        
+        # 取得檢查間隔
         self.check_interval = TRADING_CONFIG["check_interval_seconds"]
         
         # 初始化 Telegram Bot（如果 ENABLE_TELEGRAM_BOT=true）
@@ -227,7 +231,10 @@ class StockTradingBot:
         
         logger.info("開始市場掃描...")
         
-        for symbol in TRADING_CONFIG["symbols"]:
+        # 重新載入監控股票清單
+        self.symbols = self.db.get_monitor_symbols()
+        
+        for symbol in self.symbols:
             try:
                 self.process_symbol(symbol)
             except Exception as e:

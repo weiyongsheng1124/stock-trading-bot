@@ -11,6 +11,7 @@ TRADES_FILE = os.path.join(DATA_DIR, "trades.json")
 SIGNALS_FILE = os.path.join(DATA_DIR, "signals.json")
 LOGS_FILE = os.path.join(DATA_DIR, "logs.json")
 CONFIG_FILE = os.path.join(DATA_DIR, "strategy_config.json")
+SYMBOLS_FILE = os.path.join(DATA_DIR, "monitor_symbols.json")
 
 # 確保數據目錄存在
 os.makedirs(DATA_DIR, exist_ok=True)
@@ -22,9 +23,12 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 # ============ 控制開關 ============
 ENABLE_TELEGRAM_BOT = os.getenv("ENABLE_TELEGRAM_BOT", "false").lower() == "true"
 
+# ============ 預設監控股票 ============
+DEFAULT_SYMBOLS = ["2330.TW", "8110.TW", "2337.TW"]
+
 # ============ 監控股票清單 ============
 TRADING_CONFIG = {
-    "symbols": ["2330.TW", "8110.TW", "2337.TW"],
+    "symbols": DEFAULT_SYMBOLS,
     "check_interval_seconds": 300,  # 5分鐘
     "trading_hours": {
         "start": "09:00",

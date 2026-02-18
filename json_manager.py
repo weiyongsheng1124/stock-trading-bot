@@ -311,6 +311,42 @@ class JsonManager:
             return config.get("params")
         except:
             return None
+    
+    # ============ 監控股票管理 ============
+    
+    def get_monitor_symbols(self):
+        """取得監控股票清單"""
+        try:
+            data = self._read_json(SYMBOLS_FILE)
+            return data.get("symbols", ["2330.TW", "8110.TW", "2337.TW"])
+        except:
+            return ["2330.TW", "8110.TW", "2337.TW"]
+    
+    def add_monitor_symbol(self, symbol):
+        """新增監控股票"""
+        symbols = self.get_monitor_symbols()
+        symbol = symbol.upper().strip()
+        if symbol and symbol not in symbols:
+            symbols.append(symbol)
+            self._write_json(SYMBOLS_FILE, {"symbols": symbols, "updated_at": datetime.now().isoformat()})
+            return True
+        return False
+    
+    def remove_monitor_symbol(self, symbol):
+        """移除監控股票"""
+        symbols = self.get_monitor_symbols()
+        symbol = symbol.upper().strip()
+        if symbol in symbols:
+            symbols.remove(symbol)
+            self._write_json(SYMBOLS_FILE, {"symbols": symbols, "updated_at": datetime.now().isoformat()})
+            return True
+        return False
+    
+    def set_monitor_symbols(self, symbols_list):
+        """設定監控股票清單"""
+        symbols = [s.upper().strip() for s in symbols_list if s.strip()]
+        self._write_json(SYMBOLS_FILE, {"symbols": symbols, "updated_at": datetime.now().isoformat()})
+        return symbols
 
 
 # 取得實例

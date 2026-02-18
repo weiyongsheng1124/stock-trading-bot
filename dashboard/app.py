@@ -25,6 +25,7 @@ def monitor():
     positions = db.get_all_positions()
     cooldown = db.get_cooldown_symbols()
     stats = db.get_trade_stats()
+    symbols = db.get_monitor_symbols()
     
     return render_template(
         'monitor.html',
@@ -32,7 +33,7 @@ def monitor():
         cooldown=cooldown,
         stats=stats,
         trading_hours=TRADING_CONFIG["trading_hours"],
-        symbols=TRADING_CONFIG["symbols"]
+        symbols=symbols
     )
 
 
@@ -59,6 +60,34 @@ def api_logs():
     level = request.args.get('level')
     limit = int(request.args.get('limit', 50))
     return jsonify(db.get_logs(level=level, limit=limit))
+
+
+# ============ 監控股票管理 ============
+
+@app.route('/api/symbols')
+def api_symbols():
+    """取得監控股票清單"""
+    return jsonify(db.get_monitor_symbols())
+
+
+@app.route('/api/symbols/add', methods=['POST'])
+def api_add_symbol():
+    """新增監控股票"""
+    data = request.get_json()
+    symbol = data.get('symbol', '').strip().upper()
+    if symbol:
+        success = db.add_monitor_symbol(symbol)
+        return jsonify({"success": success, "symbol": symbol})
+    return jsonify({"success": False, "error": "無效的股票代碼"})
+
+
+@app.route('/api/symbols/remove', methods=['POST'])
+def api_remove_symbol():
+    """移除監控股票"""
+    data = request.get_json()
+    symbol = data.get('symbol', '').strip().upper()
+    success = db.remove_monitor_symbol(symbol)
+    return jsonify({"success": success, "symbol": symbol})
 
 
 # ============ 策略配置頁 ============
@@ -109,7 +138,8 @@ def backtest():
         interval = request.form.get('interval', '1d')
         return redirect(url_for('backtest_result', symbol=symbol, period=period, interval=interval))
     
-    return render_template('backtest.html', symbols=TRADING_CONFIG["symbols"])
+    symbols = db.get_monitor_symbols()
+    return render_template('backtest.html', symbols=symbols)
 
 
 @app.route('/backtest/result')
