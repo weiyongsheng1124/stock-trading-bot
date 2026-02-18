@@ -550,14 +550,26 @@ def run_backtest(symbol, period, interval, initial_capital=100000):
     equity_curve = result.get("equity_curve", [])
     if equity_curve and len(equity_curve) > 0:
         equity_values = [e["equity"] for e in equity_curve]
+        initial_equity = equity_values[0]
         drawdown = []
+        peak = initial_equity  # 初始峰值
+        
         for i, eq in enumerate(equity_values):
-            peak = max(equity_values[:i+1]) if equity_values[:i+1] else eq
-            dd = (peak - eq) / peak * 100 if peak > 0 else 0
+            # 更新峰值
+            if eq > peak:
+                peak = eq
+            
+            # 計算回撤：(峰值 - 當前) / 峰值 * 100
+            if peak > 0:
+                dd = (peak - eq) / peak * 100
+            else:
+                dd = 0
+            
             drawdown.append({
                 "time": equity_curve[i]["time"],
                 "drawdown": round(dd, 2)
             })
+        
         result["drawdown"] = drawdown
         result["max_drawdown"] = round(max([d["drawdown"] for d in drawdown]) if drawdown else 0, 2)
     else:
