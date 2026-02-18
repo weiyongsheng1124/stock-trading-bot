@@ -62,6 +62,16 @@ def api_logs():
     return jsonify(db.get_logs(level=level, limit=limit))
 
 
+
+def safe_round(val, decimals=2):
+    """安全四捨五入，處理 NaN"""
+    import math
+    try:
+        if val is None or (isinstance(val, float) and math.isnan(val)):
+            return None
+        return round(float(val), decimals)
+    except (ValueError, TypeError):
+        return None
 @app.route('/api/live_chart/<symbol>')
 def api_live_chart(symbol):
     import yfinance as yf
@@ -105,17 +115,17 @@ def api_live_chart(symbol):
         for i, row in df.iterrows():
             candle = {
                 "time": i.strftime("%Y-%m-%d %H:%M:%S"),
-                "open": round(row['Open'], 2),
-                "high": round(row['High'], 2),
-                "low": round(row['Low'], 2),
-                "close": round(row['Close'], 2),
+                "open": safe_round(row['Open'], 2),
+                "high": safe_round(row['High'], 2),
+                "low": safe_round(row['Low'], 2),
+                "close": safe_round(row['Close'], 2),
                 "volume": int(row['Volume']),
-                "macd": round(row['MACD'], 4),
-                "macd_signal": round(row['MACD_Signal'], 4),
-                "macd_hist": round(row['MACD_Hist'], 4),
-                "rsi": round(row['RSI'], 2),
-                "adx": round(row['ADX'], 2),
-                "atr": round(row['ATR'], 2)
+                "macd": safe_round(row['MACD'], 4),
+                "macd_signal": safe_round(row['MACD_Signal'], 4),
+                "macd_hist": safe_round(row['MACD_Hist'], 4),
+                "rsi": safe_round(row['RSI'], 2),
+                "adx": safe_round(row['ADX'], 2),
+                "atr": safe_round(row['ATR'], 2)
             }
             candles.append(candle)
         
