@@ -528,7 +528,6 @@ def optimize_params(symbol, period, interval, initial_capital, target_win_rate):
 
 def run_backtest_with_params(df, params, initial_capital=100000):
     """使用指定參數執行回測"""
-    import pandas as pd
     from ta.momentum import RSIIndicator
     from ta.trend import MACD, ADXIndicator
     from ta.volatility import AverageTrueRange
@@ -558,6 +557,9 @@ def run_backtest_with_params(df, params, initial_capital=100000):
         df['MACD_Hist'] = macd.macd_diff().fillna(0)
         
         df['RSI'] = RSIIndicator(df['Close'], window=params["rsi"]["period"]).rsi().fillna(50)
+        
+        adx = ADXIndicator(df['High'], df['Low'], df['Close'], window=params["adx"]["period"])
+        df['ADX'] = adx.adx().fillna(20)  # 預設 20
         
         atr = AverageTrueRange(df['High'], df['Low'], df['Close'], window=params["atr"]["period"])
         df['ATR'] = atr.average_true_range().fillna(df['Close'].mean() * 0.02)
@@ -601,8 +603,8 @@ def run_backtest_with_params(df, params, initial_capital=100000):
         # 從有足夠歷史資料的地方開始
         start_idx = 30  # 避開前面需要計算指標的資料
         
-        # 預設 ADX 值
-        default_adx = 20
+        # 從有足夠歷史資料的地方開始
+        start_idx = 30  # 避開前面需要計算指標的資料
         
         for i in range(start_idx, len(df)):
             current_price = float(df['Close'].iloc[i])
@@ -619,14 +621,9 @@ def run_backtest_with_params(df, params, initial_capital=100000):
                 "time": current_time,
                 "rsi": round(float(df['RSI'].iloc[i]), 2)
             })
-            # 安全取得 ADX 值
-            try:
-                adx_val = float(df['ADX'].iloc[i]) if 'ADX' in df.columns and pd.notna(df['ADX'].iloc[i]) else default_adx
-            except:
-                adx_val = default_adx
             adx_data.append({
                 "time": current_time,
-                "adx": round(adx_val, 2)
+                "adx": round(float(df['ADX'].iloc[i]), 2)
             })
             
             # 計算總資產（現金 + 股票價值）
