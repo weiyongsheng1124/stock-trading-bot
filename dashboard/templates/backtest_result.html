@@ -46,7 +46,7 @@
         <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
             <div class="bg-white rounded-lg shadow p-4">
                 <div class="text-gray-500 text-xs">總報酬率</div>
-                <div class="text-2xl font-bold {% if result.total_return|default(0) >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                <div class="text-2xl font-bold {% if result.total_return|default(0) >= 0 %}text-red-600{% else %}text-green-600{% endif %}">
                     {{ "%.2f"|format(result.total_return|default(0)) }}%
                 </div>
             </div>
@@ -56,7 +56,7 @@
             </div>
             <div class="bg-white rounded-lg shadow p-4">
                 <div class="text-gray-500 text-xs">勝率</div>
-                <div class="text-2xl font-bold {% if result.win_rate|default(0) >= 50 %}text-green-600{% else %}text-red-600{% endif %}">
+                <div class="text-2xl font-bold {% if result.win_rate|default(0) >= 50 %}text-red-600{% else %}text-green-600{% endif %}">
                     {{ "%.1f"|format(result.win_rate|default(0)) }}%
                 </div>
                 <div class="text-xs text-gray-400">{{ result.wins|default(0) }} 勝 / {{ result.losses|default(0) }} 敗</div>
@@ -67,13 +67,13 @@
             </div>
             <div class="bg-white rounded-lg shadow p-4">
                 <div class="text-gray-500 text-xs">最終資金</div>
-                <div class="text-2xl font-bold {% if result.final_capital|default(capital) > capital %}text-green-600{% else %}text-red-600{% endif %}">
+                <div class="text-2xl font-bold {% if result.final_capital|default(capital) > capital %}text-red-600{% else %}text-green-600{% endif %}">
                     ${{ "{:,.0f}".format(result.final_capital|default(capital)) }}
                 </div>
             </div>
             <div class="bg-white rounded-lg shadow p-4">
                 <div class="text-gray-500 text-xs">獲利金額</div>
-                <div class="text-2xl font-bold {% if (result.final_capital|default(capital) - capital) >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                <div class="text-2xl font-bold {% if (result.final_capital|default(capital) - capital) >= 0 %}text-red-600{% else %}text-green-600{% endif %}">
                     ${{ "{:+,.0f}".format((result.final_capital|default(capital) - capital)) }}
                 </div>
             </div>
@@ -211,19 +211,19 @@
                     </thead>
                     <tbody class="divide-y divide-gray-200">
                         {% for trade in result.trades %}
-                        <tr class="{% if trade.win %}bg-green-50{% else %}bg-red-50{% endif %}">
+                        <tr class="{% if trade.win %}bg-red-50{% else %}bg-green-50{% endif %}">
                             <td class="px-4 py-3 text-sm">{{ trade.id }}</td>
                             <td class="px-4 py-3 text-sm">{{ trade.entry_date }}</td>
                             <td class="px-4 py-3 text-sm text-right">${{ trade.entry_price }}</td>
                             <td class="px-4 py-3 text-sm text-right">${{ trade.exit_price }}</td>
-                            <td class="px-4 py-3 text-sm text-right font-bold {% if trade.pnl >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                            <td class="px-4 py-3 text-sm text-right font-bold {% if trade.pnl >= 0 %}text-red-600{% else %}text-green-600{% endif %}">
                                 {{ "%.2f"|format(trade.pnl) }}%
                             </td>
                             <td class="px-4 py-3 text-center">
                                 {% if trade.win %}
-                                <span class="px-2 py-1 bg-green-200 text-green-800 rounded text-xs">獲利</span>
+                                <span class="px-2 py-1 bg-red-200 text-red-800 rounded text-xs">獲利</span>
                                 {% else %}
-                                <span class="px-2 py-1 bg-red-200 text-red-800 rounded text-xs">虧損</span>
+                                <span class="px-2 py-1 bg-green-200 text-green-800 rounded text-xs">虧損</span>
                                 {% endif %}
                             </td>
                         </tr>
@@ -425,7 +425,7 @@
                         {
                             label: '買入',
                             data: buyPoints,
-                            backgroundColor: '#ef4444',  // 紅色
+                            backgroundColor: '#ef4444',  // 紅色 - 買入後期待上漲
                             borderColor: '#ef4444',
                             pointStyle: 'triangle',
                             pointRadius: 10,
@@ -436,7 +436,7 @@
                         {
                             label: '賣出',
                             data: sellPoints,
-                            backgroundColor: '#22c55e',  // 綠色
+                            backgroundColor: '#22c55e',  // 綠色 - 賣出後期待下跌
                             borderColor: '#22c55e',
                             pointStyle: 'triangle',
                             pointRadius: 10,
