@@ -154,14 +154,28 @@ def run_backtest(symbol, period, interval):
     atr = AverageTrueRange(df['High'], df['Low'], df['Close'], window=params["atr"]["period"])
     df['ATR'] = atr.average_true_range()
     
-    # 黃金交叉確認
+    # 黃金交叉確認 - 簡化版本
+    confirm_bars = params.get("confirm_bars", 3)
+    
+    # 黃金交叉訊號
     df['GC'] = (df['MACD'] > df['MACD_Signal']) & (df['MACD'].shift(1) <= df['MACD_Signal'].shift(1))
     df['DC'] = (df['MACD'] < df['MACD_Signal']) & (df['MACD'].shift(1) >= df['MACD_Signal'].shift(1))
     
-    df['GC_Confirm'] = df['GC'].rolling(window=3).apply(
-        lambda x: all(x[i+1] and df['MACD'].iloc[-1] > df['MACD_Signal'].iloc[-1] for i in range(len(x)-1)) if len(x) >= 2 else False,
-        raw=False
-    )
+    # 建立黃金交叉確認欄位
+    gc_confirm = [False] * len(df)
+    
+    for i in range(confirm_bars + 1, len(df)):
+        # 檢查第 0 根是否黃金交叉
+        if df['GC'].iloc[i - confirm_bars]:
+            # 檢查接下來 confirm_bars 根 DIF 是否都在 DEA 上方
+            all_above = True
+            for j in range(i - confirm_bars + 1, i + 1):
+                if df['MACD'].iloc[j] <= df['MACD_Signal'].iloc[j]:
+                    all_above = False
+                    break
+            gc_confirm[i] = all_above
+    
+    df['GC_Confirm'] = gc_confirm
     
     # 回測
     capital = 100000
