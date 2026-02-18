@@ -404,10 +404,10 @@ def run_backtest_with_params(df, params, initial_capital=100000):
         for i in range(len(df)):
             price_data.append({
                 "time": str(df.index[i].date()),
-                "open": round(float(df['Open'].iloc[i]), 2),
-                "high": round(float(df['High'].iloc[i]), 2),
-                "low": round(float(df['Low'].iloc[i]), 2),
-                "close": round(float(df['Close'].iloc[i]), 2)
+                "open": float(round(float(df['Open'].iloc[i]), 2)),
+                "high": float(round(float(df['High'].iloc[i]), 2)),
+                "low": float(round(float(df['Low'].iloc[i]), 2)),
+                "close": float(round(float(df['Close'].iloc[i]), 2))
             })
         
         # 計算 MACD
@@ -481,7 +481,7 @@ def run_backtest_with_params(df, params, initial_capital=100000):
                 # 記錄買入點
                 buy_signals.append({
                     "time": current_time,
-                    "price": round(entry_price, 2),
+                    "price": float(round(entry_price, 2)),
                     "index": i
                 })
                 
