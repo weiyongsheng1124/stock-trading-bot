@@ -307,24 +307,23 @@
             })
             .then(r => r.json())
             .then(data => {
+                btn.disabled = false;
+                btn.innerText = originalText;
+                
                 if (data.success) {
-                    btn.disabled = false;
-                    btn.innerText = originalText;
                     closeApplyModal();
                     
-                    // 彈出確認，詢問是否重新回測
-                    if (confirm('✅ ' + targetSymbol + ' 參數已套用！\n\n是否立即用新參數重新回測？')) {
-                        // 重新回測，使用新套用的參數
-                        const url = '/backtest/result?symbol=' + targetSymbol + 
-                                   '&period=' + period + 
-                                   '&interval=' + interval + 
-                                   '&capital=' + capital +
-                                   '&use_symbol_params=true';
-                        window.location.href = url;
-                    }
+                    // 編碼參數為 URL
+                    const paramsJson = encodeURIComponent(JSON.stringify(params));
+                    
+                    // 重新回測，使用新參數
+                    const url = '/backtest/result?symbol=' + targetSymbol + 
+                               '&period=' + period + 
+                               '&interval=' + interval + 
+                               '&capital=' + capital +
+                               '&params_data=' + paramsJson;
+                    window.location.href = url;
                 } else {
-                    btn.disabled = false;
-                    btn.innerText = originalText;
                     alert('❌ 套用失敗');
                 }
             })
