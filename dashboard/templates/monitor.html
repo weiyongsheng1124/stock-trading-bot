@@ -314,17 +314,22 @@
                     }
                     
                     const candles = data.candles;
+                    console.log('{{ symbol }} candles 數量:', candles?.length);
+                    console.log('{{ symbol }} 第一筆:', candles?.[0]);
+                    
                     if (!candles || candles.length === 0) {
                         document.getElementById('status-{{ symbol }}').innerText = '⚠️ 無K線資料';
                         document.getElementById('status-{{ symbol }}').className = 'text-sm px-3 py-1 rounded bg-yellow-600 text-white';
                         return;
                     }
                     
+                    try {
                     const times = candles.map(c => c.time.split(' ')[1]);
                     const opens = candles.map(c => c.open);
                     const highs = candles.map(c => c.high);
                     const lows = candles.map(c => c.low);
                     const closes = candles.map(c => c.close);
+                    console.log('{{ symbol }} 價格資料載入完成');
                     
                     // K線圖
                     new Chart(document.getElementById('chart-{{ symbol }}'), {
@@ -345,6 +350,7 @@
                             scales: { x: { display: false }, y: { position: 'right' } }
                         }
                     });
+                    console.log('{{ symbol }} K線圖繪製完成');
                     
                     // MACD
                     new Chart(document.getElementById('macd-{{ symbol }}'), {
@@ -362,6 +368,7 @@
                             scales: { y: { position: 'right' } }
                         }
                     });
+                    console.log('{{ symbol }} MACD 繪製完成');
                     
                     // RSI
                     new Chart(document.getElementById('rsi-{{ symbol }}'), {
@@ -376,6 +383,7 @@
                             scales: { y: { min: 0, max: 100, position: 'right' } }
                         }
                     });
+                    console.log('{{ symbol }} RSI 繪製完成');
                     
                     // ADX
                     new Chart(document.getElementById('adx-{{ symbol }}'), {
@@ -390,6 +398,10 @@
                             scales: { y: { min: 0, max: 100, position: 'right' } }
                         }
                     });
+                    console.log('{{ symbol }} ADX 繪製完成');
+                    } catch (e) {
+                        console.error('{{ symbol }} 繪圖錯誤:', e);
+                    }
                 })
                 .catch(err => {
                     clearTimeout(timeoutId);
