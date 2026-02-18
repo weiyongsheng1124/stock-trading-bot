@@ -74,9 +74,11 @@
                     <select name="strategy_type" id="strategy_type" onchange="toggleStrategyParams(this.value)"
                             class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <option value="default">🔧 預設策略</option>
-                        {% if all_params %}
+                        {% if all_params and symbols %}
                         {% for s, data in all_params.items() %}
+                        {% if s in symbols %}
                         <option value="symbol:{{ s }}">⭐ {{ s }} 個別策略</option>
+                        {% endif %}
                         {% endfor %}
                         {% endif %}
                         <option value="custom">📝 自訂參數</option>
