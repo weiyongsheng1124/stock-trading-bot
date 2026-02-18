@@ -183,12 +183,12 @@
         <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
             <h3 class="font-bold text-lg mb-4">⚙️ 目前使用的策略參數</h3>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div>MACD: {{ result.params.macd.fast }}, {{ result.params.macd.slow }}, {{ result.params.macd.signal }}</div>
-                <div>RSI: {{ result.params.rsi.period }} ({{ result.params.rsi.oversold }}/{{ result.params.rsi.overbought }})</div>
-                <div>ADX: {{ result.params.adx.period }} (> {{ result.params.adx.threshold }})</div>
-                <div>ATR: {{ result.params.atr.period }}</div>
-                <div>確認棒數: {{ result.params.confirm_bars }}</div>
-                <div>停損倍數: {{ result.params.stop_loss_multiplier }}</div>
+                <div>MACD: {{ result.params.macd.fast if result and result.params and result.params.macd else '-' }}, {{ result.params.macd.slow if result and result.params and result.params.macd else '-' }}, {{ result.params.macd.signal if result and result.params and result.params.macd else '-' }}</div>
+                <div>RSI: {{ result.params.rsi.period if result and result.params and result.params.rsi else '-' }} ({{ result.params.rsi.oversold if result and result.params and result.params.rsi else '-' }}/{{ result.params.rsi.overbought if result and result.params and result.params.rsi else '-' }})</div>
+                <div>ADX: {{ result.params.adx.period if result and result.params and result.params.adx else '-' }} (> {{ result.params.adx.threshold if result and result.params and result.params.adx else '-' }})</div>
+                <div>ATR: {{ result.params.atr.period if result and result.params and result.params.atr else '-' }}</div>
+                <div>確認棒數: {{ result.params.confirm_bars if result and result.params else '-' }}</div>
+                <div>停損倍數: {{ result.params.stop_loss_multiplier if result and result.params else '-' }}</div>
             </div>
         </div>
 
