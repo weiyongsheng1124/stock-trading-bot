@@ -222,41 +222,62 @@ def config_symbol(symbol):
 @app.route('/config/<symbol>', methods=['POST'])
 def config_symbol_save(symbol):
     """儲存個別股票策略參數"""
-    symbol = symbol.upper()
-    
-    params = {
-        "macd": {
-            "fast": int(request.form.get('macd_fast', 12)),
-            "slow": int(request.form.get('macd_slow', 26)),
-            "signal": int(request.form.get('macd_signal', 9))
-        },
-        "rsi": {
-            "period": int(request.form.get('rsi_period', 14)),
-            "oversold": int(request.form.get('rsi_oversold', 30)),
-            "overbought": int(request.form.get('rsi_overbought', 70))
-        },
-        "adx": {
-            "period": int(request.form.get('adx_period', 14)),
-            "threshold": int(request.form.get('adx_threshold', 20))
-        },
-        "atr": {
-            "period": int(request.form.get('atr_period', 14))
-        },
-        "confirm_bars": int(request.form.get('confirm_bars', 3)),
-        "stop_loss_multiplier": float(request.form.get('stop_loss_multiplier', 2.0)),
-        "new_high_period": int(request.form.get('new_high_period', 252))
-    }
-    
-    db.save_symbol_params(symbol, params)
-    
-    return render_template(
-        'config_symbol.html',
-        symbol=symbol,
-        params=params,
-        all_symbols=db.get_monitor_symbols(),
-        all_params=db.get_all_symbol_params(),
-        success=True
-    )
+    try:
+        symbol = symbol.upper()
+        
+        # 解析表單參數
+        def get_int(key, default):
+            val = request.form.get(key)
+            try:
+                return int(val) if val else default
+            except:
+                return default
+        
+        def get_float(key, default):
+            val = request.form.get(key)
+            try:
+                return float(val) if val else default
+            except:
+                return default
+        
+        params = {
+            "macd": {
+                "fast": get_int('macd_fast', 12),
+                "slow": get_int('macd_slow', 26),
+                "signal": get_int('macd_signal', 9)
+            },
+            "rsi": {
+                "period": get_int('rsi_period', 14),
+                "oversold": get_int('rsi_oversold', 30),
+                "overbought": get_int('rsi_overbought', 70)
+            },
+            "adx": {
+                "period": get_int('adx_period', 14),
+                "threshold": get_int('adx_threshold', 20)
+            },
+            "atr": {
+                "period": get_int('atr_period', 14)
+            },
+            "confirm_bars": get_int('confirm_bars', 3),
+            "stop_loss_multiplier": get_float('stop_loss_multiplier', 2.0),
+            "new_high_period": get_int('new_high_period', 252)
+        }
+        
+        # 儲存參數
+        success = db.save_symbol_params(symbol, params)
+        
+        return render_template(
+            'config_symbol.html',
+            symbol=symbol,
+            params=params,
+            all_symbols=db.get_monitor_symbols(),
+            all_params=db.get_all_symbol_params(),
+            success=success
+        )
+    except Exception as e:
+        import traceback
+        print("儲存參數錯誤:", traceback.format_exc())
+        return render_template('error.html', error=f"儲存參數失敗：{str(e)}"), 500
 
 
 @app.route('/api/symbol_params/<symbol>')
