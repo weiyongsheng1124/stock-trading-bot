@@ -383,18 +383,37 @@
                     data: drawdownData.map(d => d.drawdown),
                     borderColor: '#dc2626',
                     backgroundColor: 'rgba(220, 38, 38, 0.1)',
-                    fill: true,
-                    tension: 0.1
+                    fill: false,  // 不填充
+                    tension: 0.1,  // 平滑曲線
+                    pointRadius: 0,  // 不顯示點
+                    pointHoverRadius: 4
                 }]
             },
             options: {
                 responsive: true,
-                plugins: { legend: { display: false } },
+                plugins: { 
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return '回撤: ' + context.parsed.y.toFixed(2) + '%';
+                            }
+                        }
+                    }
+                },
                 scales: { 
                     y: { 
                         position: 'right',
-                        title: { display: true, text: '回撤 %' }
+                        title: { display: true, text: '回撤 %' },
+                        beginAtZero: true
+                    },
+                    x: {
+                        ticks: { maxTicksLimit: 20 }
                     }
+                },
+                interaction: {
+                    mode: 'index',
+                    intersect: false
                 }
             }
         });
