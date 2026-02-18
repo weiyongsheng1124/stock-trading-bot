@@ -210,6 +210,10 @@ def run_backtest(symbol, period, interval):
     total = len(trades)
     win_rate = wins / total * 100 if total > 0 else 0
     
+    # 計算平均損益
+    pnls = [t["pnl"] for t in trades]
+    avg_pnl = sum(pnls) / len(pnls) if pnls else 0
+    
     return {
         "symbol": symbol,
         "period": period,
@@ -218,6 +222,7 @@ def run_backtest(symbol, period, interval):
         "losses": total - wins,
         "win_rate": win_rate,
         "total_return": (capital - 100000) / 100000 * 100,
+        "avg_pnl": round(avg_pnl, 2),
         "trades": trades[-20:]
     }
 
