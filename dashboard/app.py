@@ -448,6 +448,7 @@ def run_backtest_with_params(df, params, initial_capital=100000):
         shares = 0  # 股數
         position = 0  # 是否持有部位
         entry_price = 0  # 買入價格
+        entry_date = None  # 買入日期
         trades = []
         equity_curve = []  # 資金曲線（總資產 = 現金 + 股票價值）
         buy_signals = []  # 買入點
@@ -486,6 +487,7 @@ def run_backtest_with_params(df, params, initial_capital=100000):
                     cost = shares * current_price
                     cash = initial_capital_float - cost  # 剩下的是現金
                 entry_price = current_price
+                entry_date = df.index[i]
                 position = 1
                 
                 # 記錄買入點
