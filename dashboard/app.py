@@ -400,10 +400,10 @@ def run_backtest_with_params(df, params, initial_capital=100000):
         for i in range(len(df)):
             price_data.append({
                 "time": str(df.index[i].date()),
-                "open": round(df['Open'].iloc[i], 2),
-                "high": round(df['High'].iloc[i], 2),
-                "low": round(df['Low'].iloc[i], 2),
-                "close": round(df['Close'].iloc[i], 2)
+                "open": round(float(df['Open'].iloc[i]), 2),
+                "high": round(float(df['High'].iloc[i]), 2),
+                "low": round(float(df['Low'].iloc[i]), 2),
+                "close": round(float(df['Close'].iloc[i]), 2)
             })
         
         macd = MACD(df['Close'], 
@@ -438,47 +438,58 @@ def run_backtest_with_params(df, params, initial_capital=100000):
         df['GC_Confirm'] = gc_confirm
         
         # 執行回測
-        capital = initial_capital
+        capital = float(initial_capital)
         shares = 0
         position = 0
         trades = []
-        equity_curve = []
+        equity_curve = []  # 資金曲線
         buy_signals = []  # 買入點
         sell_signals = []  # 賣出點
         
-        for i in range(30, len(df)):
-            # 記錄資金曲線
+        # 從有足夠歷史資料的地方開始
+        start_idx = 30  # 避開前面需要計算指標的資料
+        
+        for i in range(start_idx, len(df)):
+            current_price = float(df['Close'].iloc[i])
+            current_time = str(df.index[i].date())
+            
+            # 記錄資金（每天都記錄）
             if position:
-                equity = shares * df['Close'].iloc[i]
+                current_equity = shares * current_price
             else:
-                equity = capital
+                current_equity = capital
+            
             equity_curve.append({
-                "time": str(df.index[i].date()),
-                "equity": round(equity, 2)
+                "time": current_time,
+                "equity": round(current_equity, 2)
             })
             
+            # 買入訊號
             if df.iloc[i]['GC_Confirm'] and position == 0:
-                shares = capital // df['Close'].iloc[i]
-                entry_price = df['Close'].iloc[i]
+                # 計算買入數量
+                if current_price > 0:
+                    shares = int(capital // current_price)
+                entry_price = current_price
                 entry_date = df.index[i]
                 position = 1
                 
                 # 記錄買入點
                 buy_signals.append({
-                    "time": str(entry_date.date()),
+                    "time": current_time,
                     "price": round(entry_price, 2),
                     "index": i
                 })
                 
+            # 賣出訊號
             elif df.iloc[i]['DC'] and position == 1:
-                exit_price = df['Close'].iloc[i]
+                exit_price = current_price
                 exit_date = df.index[i]
                 pnl = (exit_price - entry_price) / entry_price * 100
                 
                 trades.append({
                     "id": len(trades) + 1,
                     "entry_date": str(entry_date.date()),
-                    "exit_date": str(exit_date.date()),
+                    "exit_date": current_time,
                     "entry_price": round(entry_price, 2),
                     "exit_price": round(exit_price, 2),
                     "pnl": round(pnl, 2),
@@ -487,12 +498,13 @@ def run_backtest_with_params(df, params, initial_capital=100000):
                 
                 # 記錄賣出點
                 sell_signals.append({
-                    "time": str(exit_date.date()),
+                    "time": current_time,
                     "price": round(exit_price, 2),
                     "index": i,
                     "pnl": round(pnl, 2)
                 })
                 
+                # 更新資金
                 capital = shares * exit_price
                 position = 0
                 shares = 0
@@ -501,6 +513,21 @@ def run_backtest_with_params(df, params, initial_capital=100000):
         total = len(trades)
         winning = [t for t in trades if t["win"]]
         win_rate = len(winning) / total * 100 if total > 0 else 0
+        
+        # 計算回撤曲線
+        drawdown = []
+        if equity_curve:
+            equity_values = [e["equity"] for e in equity_curve]
+            peak = equity_values[0]
+            
+            for eq in equity_values:
+                if eq > peak:
+                    peak = eq
+                dd = (peak - eq) / peak * 100 if peak > 0 else 0
+                drawdown.append({
+                    "time": equity_curve[len(drawdown)]["time"],
+                    "drawdown": round(dd, 2)
+                })
         
         return {
             "total_trades": total,
@@ -513,12 +540,15 @@ def run_backtest_with_params(df, params, initial_capital=100000):
             "buy_signals": buy_signals,
             "sell_signals": sell_signals,
             "price_data": price_data,
+            "drawdown": drawdown,
+            "max_drawdown": round(max([d["drawdown"] for d in drawdown]) if drawdown else 0, 2),
             "final_capital": round(capital, 2),
             "params": params
         }
         
     except Exception as e:
-        return {"error": str(e)}
+        import traceback
+        return {"error": f"{str(e)}\n{traceback.format_exc()}"}
 
 
 def run_backtest(symbol, period, interval, initial_capital=100000):
@@ -545,37 +575,6 @@ def run_backtest(symbol, period, interval, initial_capital=100000):
     
     if "error" in result:
         return result
-    
-    # 加入 equity_curve 和 drawdown
-    equity_curve = result.get("equity_curve", [])
-    if equity_curve and len(equity_curve) > 0:
-        equity_values = [e["equity"] for e in equity_curve]
-        initial_equity = equity_values[0]
-        drawdown = []
-        peak = initial_equity  # 初始峰值
-        
-        for i, eq in enumerate(equity_values):
-            # 更新峰值
-            if eq > peak:
-                peak = eq
-            
-            # 計算回撤：(峰值 - 當前) / 峰值 * 100
-            if peak > 0:
-                dd = (peak - eq) / peak * 100
-            else:
-                dd = 0
-            
-            drawdown.append({
-                "time": equity_curve[i]["time"],
-                "drawdown": round(dd, 2)
-            })
-        
-        result["drawdown"] = drawdown
-        result["max_drawdown"] = round(max([d["drawdown"] for d in drawdown]) if drawdown else 0, 2)
-    else:
-        result["equity_curve"] = []
-        result["drawdown"] = []
-        result["max_drawdown"] = 0
     
     return result
 
