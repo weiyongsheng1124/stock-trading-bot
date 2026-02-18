@@ -268,6 +268,9 @@
             .then(data => {
                 if (data.success) {
                     loadSymbols();
+                }
+            });
+        }
 
         // ============ 圖表載入 ============
         {% for symbol in symbols %}
