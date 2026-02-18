@@ -169,11 +169,11 @@
             <canvas id="priceChart" height="300"></canvas>
             <div class="mt-4 flex gap-4 text-sm">
                 <div class="flex items-center gap-2">
-                    <span class="w-4 h-4 bg-green-500 rounded-full"></span>
+                    <span class="w-4 h-4 bg-red-500 rounded-full"></span>
                     <span>買入點</span>
                 </div>
                 <div class="flex items-center gap-2">
-                    <span class="w-4 h-4 bg-red-500 rounded-full"></span>
+                    <span class="w-4 h-4 bg-green-500 rounded-full"></span>
                     <span>賣出點</span>
                 </div>
             </div>
@@ -404,8 +404,8 @@
                         {
                             label: '買入',
                             data: buyPoints,
-                            backgroundColor: '#22c55e',
-                            borderColor: '#22c55e',
+                            backgroundColor: '#ef4444',  // 紅色
+                            borderColor: '#ef4444',
                             pointStyle: 'triangle',
                             pointRadius: 12,
                             pointRotation: 0,
@@ -414,8 +414,8 @@
                         {
                             label: '賣出',
                             data: sellPoints,
-                            backgroundColor: '#ef4444',
-                            borderColor: '#ef4444',
+                            backgroundColor: '#22c55e',  // 綠色
+                            borderColor: '#22c55e',
                             pointStyle: 'triangle',
                             pointRadius: 12,
                             pointRotation: 180,
