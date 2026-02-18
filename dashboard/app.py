@@ -312,9 +312,12 @@ def optimize_params(symbol, period, interval, initial_capital, target_win_rate):
     from ta.volatility import AverageTrueRange
     
     # 取得股價資料
-    df = yf.Ticker(symbol).history(period=period, interval=interval)
-    if df is None or len(df) < 50:
-        return {"error": "無法取得股價資料"}
+    try:
+        df = yf.Ticker(symbol).history(period=period, interval=interval)
+        if df is None or len(df) < 50:
+            return {"error": f"無法取得 {symbol} 的股價資料或資料不足 (取得 {len(df) if df is not None else 0} 筆)"}
+    except Exception as e:
+        return {"error": f"取得股價資料失敗：{str(e)}"}
     
     # 參數網格
     param_grid = {
@@ -328,6 +331,8 @@ def optimize_params(symbol, period, interval, initial_capital, target_win_rate):
     
     best_result = None
     best_score = -999
+    total_combinations = 0
+    valid_combinations = 0
     
     # 遍歷所有參數組合
     for macd_fast in param_grid["macd_fast"]:
@@ -339,6 +344,8 @@ def optimize_params(symbol, period, interval, initial_capital, target_win_rate):
                     for confirm in param_grid["confirm_bars"]:
                         for sl_mult in param_grid["stop_loss_multiplier"]:
                             
+                            total_combinations += 1
+                            
                             params = {
                                 "macd": {"fast": macd_fast, "slow": macd_slow, "signal": signal},
                                 "rsi": {"period": rsi_period, "oversold": 30, "overbought": 70},
@@ -348,21 +355,27 @@ def optimize_params(symbol, period, interval, initial_capital, target_win_rate):
                                 "stop_loss_multiplier": sl_mult
                             }
                             
-                            result = run_backtest_with_params(df, params, initial_capital)
-                            
-                            if "error" in result:
+                            try:
+                                result = run_backtest_with_params(df, params, initial_capital)
+                                
+                                if "error" in result:
+                                    continue
+                                
+                                valid_combinations += 1
+                                
+                                # 計算分數：接近目標勝率且報酬率越高越好
+                                win_rate_diff = abs(result["win_rate"] - target_win_rate)
+                                score = -win_rate_diff * 100 + result["total_return"] * 0.1
+                                
+                                if score > best_score:
+                                    best_score = score
+                                    best_result = result
+                                    
+                            except Exception as e:
                                 continue
-                            
-                            # 計算分數：接近目標勝率且報酬率越高越好
-                            win_rate_diff = abs(result["win_rate"] - target_win_rate)
-                            score = -win_rate_diff * 100 + result["total_return"] * 0.1
-                            
-                            if score > best_score:
-                                best_score = score
-                                best_result = result
     
     if best_result is None:
-        return {"error": "找不到符合條件的參數組合"}
+        return {"error": f"找不到符合條件的參數組合 (已測試 {total_combinations} 組，其中 {valid_combinations} 組有效)"}
     
     return {
         "symbol": symbol,

@@ -268,9 +268,11 @@
                     initial_capital: capital
                 })
             })
-            .then(r => {
-                if (!r.ok) throw new Error('API 請求失敗');
-                return r.json();
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('伺服器錯誤: ' + response.status);
+                }
+                return response.json();
             })
             .then(data => {
                 btn.disabled = false;
@@ -295,14 +297,15 @@
                     
                     document.getElementById('optimizeResult').classList.remove('hidden');
                 } else {
-                    alert('❌ ' + (data.error || '找不到符合條件的參數組合'));
+                    const errorMsg = data.error || '找不到符合條件的參數組合';
+                    alert('❌ ' + errorMsg);
                 }
             })
             .catch(err => {
                 btn.disabled = false;
                 btn.innerText = originalText;
                 document.getElementById('optimizeLoading').classList.add('hidden');
-                alert('❌ 優化失敗：' + err.message);
+                alert('❌ 網路錯誤：' + err.message + '\n請稍後再試');
             });
         }
 
