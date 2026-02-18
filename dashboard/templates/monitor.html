@@ -276,12 +276,19 @@
         // ============ 圖表載入 ============
         {% for symbol in symbols %}
         console.log('載入 {{ symbol }}...');
-        fetch('/api/live_chart/{{ symbol }}')
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超時
+        
+        fetch('/api/live_chart/{{ symbol }}', { signal: controller.signal })
             .then(r => {
+                clearTimeout(timeoutId);
                 console.log('{{ symbol }} 回應狀態:', r.status);
+                if (!r.ok) throw new Error('HTTP ' + r.status);
                 return r.json();
             })
             .then(data => {
+                clearTimeout(timeoutId);
                 console.log('{{ symbol }} 資料:', data);
                 if (data.error) {
                     document.getElementById('status-{{ symbol }}').innerText = '❌ ' + (data.error || '載入失敗');
@@ -417,8 +424,9 @@
                 });
             })
             .catch(err => {
-                console.error('載入失敗:', err);
-                document.getElementById('status-{{ symbol }}').innerText = '❌ 網路錯誤';
+                clearTimeout(timeoutId);
+                console.error('{{ symbol }} 載入失敗:', err);
+                document.getElementById('status-{{ symbol }}').innerText = '❌ ' + err.message;
                 document.getElementById('status-{{ symbol }}').className = 'text-sm px-3 py-1 rounded bg-red-600 text-white';
             });
         {% endfor %}
