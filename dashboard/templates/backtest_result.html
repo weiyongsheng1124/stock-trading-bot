@@ -345,9 +345,12 @@
         // ============ 圖表 ============
         {% if result and result.equity_curve %}
         const equityData = {{ result.equity_curve | tojson }};
-        const drawdownData = {{ result.drawdown | tojson }};
-        const buySignals = {{ result.buy_signals | tojson }};
-        const sellSignals = {{ result.sell_signals | tojson }};
+        const drawdownData = {{ result.drawdown | default([]) | tojson }};
+        const buySignals = {{ result.buy_signals | default([]) | tojson }};
+        const sellSignals = {{ result.sell_signals | default([]) | tojson }};
+        
+        console.log('Equity data length:', equityData.length);
+        console.log('Drawdown data:', drawdownData);
         
         // 資金曲線
         new Chart(document.getElementById('equityChart'), {
