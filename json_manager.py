@@ -3,7 +3,6 @@ JSON 文件管理模組 - 取代 MongoDB
 """
 import json
 import os
-import base64
 import shutil
 from datetime import datetime
 from config import (
@@ -43,36 +42,14 @@ class JsonManager:
             return []
     
     def _write_json(self, file_path, data):
-        """寫入 JSON 文件"""
-        # 嘗試寫入，如果失敗則寫入 /tmp
+        """寫入 JSON 文件（Railway filesystem 唯讀，可能失敗）"""
         try:
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
             with open(file_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False, indent=2, default=str)
         except Exception as e:
-            # 如果無法寫入，使用環境變數備份
-            print(f"警告: 無法寫入 {file_path}，使用環境變數備份: {e}")
-            self._backup_to_env(file_path, data)
-    
-    def _backup_to_env(self, file_path, data):
-        """將數據備份到環境變數"""
-        key = f"BACKUP_{os.path.basename(file_path).upper().replace('.', '_')}"
-        try:
-            encoded = base64.b64encode(json.dumps(data, ensure_ascii=False).encode('utf-8')).decode('ascii')
-            os.environ[key] = encoded
-        except:
-            pass
-    
-    def _restore_from_env(self, file_path, default=None):
-        """從環境變數恢復數據"""
-        key = f"BACKUP_{os.path.basename(file_path).upper().replace('.', '_')}"
-        try:
-            encoded = os.environ.get(key, '')
-            if encoded:
-                return json.loads(base64.b64decode(encoded).decode('utf-8'))
-        except:
-            pass
-        return default
+            # Railway filesystem 唯讀，忽略寫入錯誤
+            print(f"警告: 無法寫入 {file_path} ({e})，數據可能僅存儲在內存中")
     
     # ============ 持倉管理 ============
     
@@ -343,30 +320,17 @@ class JsonManager:
     
     # ============ 個別股票策略配置 ============
     
+    # 使用內存存儲參數（Railway filesystem 唯讀）
+    _symbol_params_cache = {}
+    
     def save_symbol_params(self, symbol, params):
-        """儲存個別股票的策略參數"""
+        """儲存個別股票的策略參數（內存存儲）"""
         try:
-            # 嘗試從環境變數讀取現有數據
-            existing = self._restore_from_env(SYMBOL_PARAMS_FILE, {"symbols": {}})
-            data = existing if isinstance(existing, dict) else {"symbols": {}}
-            
             symbol = symbol.upper()
-            data["symbols"][symbol] = {
+            self._symbol_params_cache[symbol] = {
                 "params": params,
                 "updated_at": datetime.now().isoformat()
             }
-            
-            # 先嘗試寫入文件，如果失敗則寫入環境變數
-            try:
-                os.makedirs(os.path.dirname(SYMBOL_PARAMS_FILE), exist_ok=True)
-                with open(SYMBOL_PARAMS_FILE, 'w', encoding='utf-8') as f:
-                    json.dump(data, f, ensure_ascii=False, indent=2, default=str)
-            except:
-                # 寫入環境變數備份
-                key = "BACKUP_SYMBOL_PARAMS"
-                encoded = base64.b64encode(json.dumps(data, ensure_ascii=False).encode('utf-8')).decode('ascii')
-                os.environ[key] = encoded
-            
             return True
         except Exception as e:
             print(f"儲存股票參數失敗: {e}")
@@ -375,22 +339,9 @@ class JsonManager:
     def get_symbol_params(self, symbol):
         """取得個別股票的策略參數"""
         try:
-            # 先嘗試從文件讀取
-            try:
-                with open(SYMBOL_PARAMS_FILE, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-            except:
-                # 從環境變數恢復
-                key = "BACKUP_SYMBOL_PARAMS"
-                encoded = os.environ.get(key, '')
-                if encoded:
-                    data = json.loads(base64.b64decode(encoded).decode('utf-8'))
-                else:
-                    data = {"symbols": {}}
-            
             symbol = symbol.upper()
-            if symbol in data.get("symbols", {}):
-                return data["symbols"][symbol].get("params")
+            if symbol in self._symbol_params_cache:
+                return self._symbol_params_cache[symbol].get("params")
             return None
         except Exception as e:
             print(f"取得股票參數失敗: {e}")
@@ -398,54 +349,14 @@ class JsonManager:
     
     def get_all_symbol_params(self):
         """取得所有股票的個別參數"""
-        try:
-            # 先嘗試從文件讀取
-            try:
-                with open(SYMBOL_PARAMS_FILE, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-            except:
-                # 從環境變數恢復
-                key = "BACKUP_SYMBOL_PARAMS"
-                encoded = os.environ.get(key, '')
-                if encoded:
-                    data = json.loads(base64.b64decode(encoded).decode('utf-8'))
-                else:
-                    data = {"symbols": {}}
-            
-            return data.get("symbols", {})
-        except:
-            return {}
+        return self._symbol_params_cache.copy()
     
     def delete_symbol_params(self, symbol):
         """刪除個別股票的策略參數"""
         try:
-            # 先嘗試從文件讀取
-            try:
-                with open(SYMBOL_PARAMS_FILE, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-            except:
-                # 從環境變數恢復
-                key = "BACKUP_SYMBOL_PARAMS"
-                encoded = os.environ.get(key, '')
-                if encoded:
-                    data = json.loads(base64.b64decode(encoded).decode('utf-8'))
-                else:
-                    data = {"symbols": {}}
-            
             symbol = symbol.upper()
-            if symbol in data.get("symbols", {}):
-                del data["symbols"][symbol]
-                
-                # 寫回
-                try:
-                    with open(SYMBOL_PARAMS_FILE, 'w', encoding='utf-8') as f:
-                        json.dump(data, f, ensure_ascii=False, indent=2, default=str)
-                except:
-                    # 寫入環境變數備份
-                    key = "BACKUP_SYMBOL_PARAMS"
-                    encoded = base64.b64encode(json.dumps(data, ensure_ascii=False).encode('utf-8')).decode('ascii')
-                    os.environ[key] = encoded
-            
+            if symbol in self._symbol_params_cache:
+                del self._symbol_params_cache[symbol]
             return True
         except:
             return False
