@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>股票交易機器人 - 策略配置</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- 導航欄 -->
+    <nav class="bg-gray-800 text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="text-xl font-bold">📈 股票交易機器人</div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="/monitor" class="px-4 py-2 hover:text-gray-300">即時監控</a>
+                    <a href="/config" class="bg-blue-600 px-4 py-2 rounded">策略配置</a>
+                    <a href="/backtest" class="px-4 py-2 hover:text-gray-300">回測</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-4xl mx-auto px-4 py-8">
+        <!-- 成功訊息 -->
+        {% if success %}
+        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
+            ✅ 參數已儲存成功！
+        </div>
+        {% endif %}
+
+        <form method="POST" action="/config">
+            <!-- MACD 參數 -->
+            <div class="bg-white rounded-lg shadow-lg overflow-hidden mb-6">
+                <div class="bg-blue-600 text-white px-6 py-4">
+                    <h2 class="text-lg font-bold">📊 MACD 參數</h2>
+                    <p class="text-sm opacity-80">平滑異同移動平均線</p>
+                </div>
+                <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">快速週期 (Fast)</label>
+                        <input type="number" name="macd_fast" value="{{ params.macd.fast }}" 
+                               class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500" min="1">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">慢速週期 (Slow)</label>
+                        <input type="number" name="macd_slow" value="{{ params.macd.slow }}" 
+                               class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500" min="1">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Signal 週期</label>
+                        <input type="number" name="macd_signal" value="{{ params.macd.signal }}" 
+                               class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500" min="1">
+                    </div>
+                </div>
+            </div>
+
+            <!-- RSI 參數 -->
+            <div class="bg-white rounded-lg shadow-lg overflow-hidden mb-6">
+                <div class="bg-purple-600 text-white px-6 py-4">
+                    <h2 class="text-lg font-bold">📉 RSI 參數</h2>
+                    <p class="text-sm opacity-80">相對強弱指數</p>
+                </div>
+                <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">計算週期</label>
+                        <input type="number" name="rsi_period" value="{{ params.rsi.period }}" 
+                               class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500" min="1">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">超賣門檻</label>
+                        <input type="number" name="rsi_oversold" value="{{ params.rsi.oversold }}" 
+                               class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500" min="0" max="100">
+                        <p class="text-xs text-gray-500 mt-1">RSI 低於此值視為超賣</p>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">超買門檻</label>
+                        <input type="number" name="rsi_overbought" value="{{ params.rsi.overbought }}" 
+                               class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500" min="0" max="100">
+                        <p class="text-xs text-gray-500 mt-1">RSI 高於此值視為超買</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ADX 參數 -->
+            <div class="bg-white rounded-lg shadow-lg overflow-hidden mb-6">
+                <div class="bg-indigo-600 text-white px-6 py-4">
+                    <h2 class="text-lg font-bold">📈 ADX 參數</h2>
+                    <p class="text-sm opacity-80">平均趨向指數</p>
+                </div>
+                <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">計算週期</label>
+                        <input type="number" name="adx_period" value="{{ params.adx.period }}" 
+                               class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500" min="1">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">趨勢門檻</label>
+                        <input type="number" name="adx_threshold" value="{{ params.adx.threshold }}" 
+                               class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500" min="0" max="100">
+                        <p class="text-xs text-gray-500 mt-1">ADX 高於此值表示有趨勢</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ATR 參數 -->
+            <div class="bg-white rounded-lg shadow-lg overflow-hidden mb-6">
+                <div class="bg-green-600 text-white px-6 py-4">
+                    <h2 class="text-lg font-bold">🛡️ ATR 風控參數</h2>
+                    <p class="text-sm opacity-80">平均真實波幅</p>
+                </div>
+                <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">計算週期</label>
+                        <input type="number" name="atr_period" value="{{ params.atr.period }}" 
+                               class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-green-500" min="1">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">停損倍數</label>
+                        <input type="number" name="stop_loss_multiplier" value="{{ params.stop_loss_multiplier }}" 
+                               class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-green-500" step="0.1" min="0.1">
+                        <p class="text-xs text-gray-500 mt-1">停損 = 買入價 - 2 × ATR</p>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">新高計算週期</label>
+                        <input type="number" name="new_high_period" value="{{ params.new_high_period }}" 
+                               class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-green-500" min="1">
+                        <p class="text-xs text-gray-500 mt-1">計算近 N 日新高</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 其他參數 -->
+            <div class="bg-white rounded-lg shadow-lg overflow-hidden mb-6">
+                <div class="bg-yellow-600 text-white px-6 py-4">
+                    <h2 class="text-lg font-bold">⚙️ 其他參數</h2>
+                </div>
+                <div class="p-6">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">黃金交叉確認棒數</label>
+                        <input type="number" name="confirm_bars" value="{{ params.confirm_bars }}" 
+                               class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-yellow-500" min="1" max="10">
+                        <p class="text-xs text-gray-500 mt-1">黃金交叉後需幾根 K 棒確認 (DIF 持續在 DEA 上方)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 提交按鈕 -->
+            <div class="flex justify-end">
+                <button type="submit" 
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transform hover:scale-105 transition duration-200">
+                    💾 儲存參數
+                </button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

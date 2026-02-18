@@ -1,0 +1,41 @@
+{
+  "name": "stock-trading-bot",
+  "version": "1.0.0",
+  "description": "股票自動交易機器人 - MACD策略",
+  "main": "bot.py",
+  "scripts": {
+    "start": "python bot.py",
+    "dashboard": "python dashboard/app.py",
+    "test": "python -m pytest"
+  },
+  "dependencies": {
+    "python": "3.11",
+    "packages": [
+      "yfinance>=0.2.36",
+      "ta>=0.11.0",
+      "pymongo>=4.6.0",
+      "python-telegram-bot>=21.0",
+      "schedule>=1.2.0",
+      "flask>=3.0.0",
+      "dash>=2.14.0",
+      "plotly>=5.18.0",
+      "python-dotenv>=1.0.0"
+    ]
+  },
+  "build": {
+    "builder": "python",
+    "install": ["pip install -r requirements.txt"]
+  },
+  "environments": {
+    "web": {
+      "quantity": 1,
+      "memory": "512MB",
+      "startCommand": "python dashboard/app.py"
+    },
+    "worker": {
+      "quantity": 1,
+      "memory": "256MB",
+      "startCommand": "python bot.py"
+    }
+  }
+}
