@@ -12,7 +12,6 @@ from config import STRATEGY_PARAMS, TRADING_CONFIG, DEFAULT_SYMBOLS
 
 app = Flask(__name__)
 
-# 初始化 JSON 管理器
 db = JsonManager()
 
 
@@ -278,7 +277,188 @@ def backtest_result():
                         result=result)
 
 
+# ============ 參數優化器 ============
+
+@app.route('/api/optimize', methods=['POST'])
+def api_optimize():
+    """參數優化器 - 根據目標勝率推薦最佳參數"""
+    data = request.get_json()
+    symbol = data.get('symbol')
+    target_win_rate = float(data.get('target_win_rate', 60))  # 預設 60%
+    period = data.get('period', '1y')
+    interval = data.get('interval', '1d')
+    initial_capital = int(data.get('initial_capital', 100000))
+    
+    if not symbol:
+        return jsonify({"success": False, "error": "請輸入股票代碼"})
+    
+    try:
+        results = optimize_params(symbol, period, interval, initial_capital, target_win_rate)
+        return jsonify({"success": True, **results})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+
+def optimize_params(symbol, period, interval, initial_capital, target_win_rate):
+    """網格搜索找出符合目標勝率的最佳參數"""
+    import yfinance as yf
+    from ta.momentum import RSIIndicator
+    from ta.trend import MACD, ADXIndicator
+    from ta.volatility import AverageTrueRange
+    
+    # 取得股價資料
+    df = yf.Ticker(symbol).history(period=period, interval=interval)
+    if df is None or len(df) < 50:
+        return {"error": "無法取得股價資料"}
+    
+    # 參數網格
+    param_grid = {
+        "macd_fast": [8, 12, 16],
+        "macd_slow": [20, 26, 32],
+        "macd_signal": [6, 9, 12],
+        "rsi_period": [7, 14, 21],
+        "confirm_bars": [1, 2, 3, 5],
+        "stop_loss_multiplier": [1.5, 2.0, 2.5]
+    }
+    
+    best_result = None
+    best_score = -999
+    
+    # 遍歷所有參數組合
+    for macd_fast in param_grid["macd_fast"]:
+        for macd_slow in param_grid["macd_slow"]:
+            if macd_fast >= macd_slow:
+                continue
+            for signal in param_grid["macd_signal"]:
+                for rsi_period in param_grid["rsi_period"]:
+                    for confirm in param_grid["confirm_bars"]:
+                        for sl_mult in param_grid["stop_loss_multiplier"]:
+                            
+                            params = {
+                                "macd": {"fast": macd_fast, "slow": macd_slow, "signal": signal},
+                                "rsi": {"period": rsi_period, "oversold": 30, "overbought": 70},
+                                "adx": {"period": 14, "threshold": 20},
+                                "atr": {"period": 14},
+                                "confirm_bars": confirm,
+                                "stop_loss_multiplier": sl_mult
+                            }
+                            
+                            result = run_backtest_with_params(df, params, initial_capital)
+                            
+                            if "error" in result:
+                                continue
+                            
+                            # 計算分數：接近目標勝率且報酬率越高越好
+                            win_rate_diff = abs(result["win_rate"] - target_win_rate)
+                            score = -win_rate_diff * 100 + result["total_return"] * 0.1
+                            
+                            if score > best_score:
+                                best_score = score
+                                best_result = result
+    
+    if best_result is None:
+        return {"error": "找不到符合條件的參數組合"}
+    
+    return {
+        "symbol": symbol,
+        "target_win_rate": target_win_rate,
+        "recommended_params": best_result["params"],
+        "result": best_result
+    }
+
+
+def run_backtest_with_params(df, params, initial_capital=100000):
+    """使用指定參數執行回測"""
+    from ta.momentum import RSIIndicator
+    from ta.trend import MACD, ADXIndicator
+    from ta.volatility import AverageTrueRange
+    
+    try:
+        # 複製資料避免修改原始資料
+        df = df.copy()
+        
+        macd = MACD(df['Close'], 
+                     window_slow=params["macd"]["slow"],
+                     window_fast=params["macd"]["fast"], 
+                     window_sign=params["macd"]["signal"])
+        df['MACD'] = macd.macd()
+        df['MACD_Signal'] = macd.macd_signal()
+        df['MACD_Hist'] = macd.macd_diff()
+        
+        df['RSI'] = RSIIndicator(df['Close'], window=params["rsi"]["period"]).rsi()
+        
+        atr = AverageTrueRange(df['High'], df['Low'], df['Close'], window=params["atr"]["period"])
+        df['ATR'] = atr.average_true_range()
+        
+        # 買賣訊號
+        df['GC'] = (df['MACD'] > df['MACD_Signal']) & (df['MACD'].shift(1) <= df['MACD_Signal'].shift(1))
+        df['DC'] = (df['MACD'] < df['MACD_Signal']) & (df['MACD'].shift(1) >= df['MACD_Signal'].shift(1))
+        
+        confirm_bars = params.get("confirm_bars", 3)
+        gc_confirm = [False] * len(df)
+        
+        for i in range(confirm_bars + 1, len(df)):
+            if df['GC'].iloc[i - confirm_bars]:
+                all_above = True
+                for j in range(i - confirm_bars + 1, i + 1):
+                    if df['MACD'].iloc[j] <= df['MACD_Signal'].iloc[j]:
+                        all_above = False
+                        break
+                gc_confirm[i] = all_above
+        
+        df['GC_Confirm'] = gc_confirm
+        
+        # 執行回測
+        capital = initial_capital
+        shares = 0
+        position = 0
+        trades = []
+        
+        for i in range(30, len(df)):
+            if df.iloc[i]['GC_Confirm'] and position == 0:
+                shares = capital // df['Close'].iloc[i]
+                entry_price = df['Close'].iloc[i]
+                entry_date = df.index[i]
+                position = 1
+                
+            elif df.iloc[i]['DC'] and position == 1:
+                exit_price = df['Close'].iloc[i]
+                pnl = (exit_price - entry_price) / entry_price * 100
+                
+                trades.append({
+                    "entry_date": str(entry_date.date()),
+                    "exit_date": str(df.index[i].date()),
+                    "pnl": round(pnl, 2),
+                    "win": pnl > 0
+                })
+                
+                capital = shares * exit_price
+                position = 0
+                shares = 0
+        
+        # 統計
+        total = len(trades)
+        winning = [t for t in trades if t["win"]]
+        win_rate = len(winning) / total * 100 if total > 0 else 0
+        
+        return {
+            "symbol": params,
+            "total_trades": total,
+            "wins": len(winning),
+            "losses": total - len(winning),
+            "win_rate": round(win_rate, 2),
+            "total_return": round((capital - initial_capital) / initial_capital * 100, 2),
+            "trades": trades,
+            "final_capital": round(capital, 2),
+            "params": params
+        }
+        
+    except Exception as e:
+        return {"error": str(e)}
+
+
 def run_backtest(symbol, period, interval, initial_capital=100000):
+    """執行回測（使用儲存的參數）"""
     import yfinance as yf
     from ta.momentum import RSIIndicator
     from ta.trend import MACD, ADXIndicator
@@ -293,111 +473,16 @@ def run_backtest(symbol, period, interval, initial_capital=100000):
     if df is None or len(df) < 50:
         return {"error": "無法取得足夠資料"}
     
-    macd = MACD(df['Close'], 
-                 window_slow=params["macd"]["slow"],
-                 window_fast=params["macd"]["fast"], 
-                 window_sign=params["macd"]["signal"])
-    df['MACD'] = macd.macd()
-    df['MACD_Signal'] = macd.macd_signal()
-    df['MACD_Hist'] = macd.macd_diff()
+    result = run_backtest_with_params(df, params, initial_capital)
     
-    df['RSI'] = RSIIndicator(df['Close'], window=params["rsi"]["period"]).rsi()
+    if "error" in result:
+        return result
     
-    adx = ADXIndicator(df['High'], df['Low'], df['Close'], window=params["adx"]["period"])
-    df['ADX'] = adx.adx()
+    # 加入圖表資料
+    df_copy = df.copy()
+    df_copy['Equity'] = [initial_capital]
     
-    atr = AverageTrueRange(df['High'], df['Low'], df['Close'], window=params["atr"]["period"])
-    df['ATR'] = atr.average_true_range()
-    
-    df['GC'] = (df['MACD'] > df['MACD_Signal']) & (df['MACD'].shift(1) <= df['MACD_Signal'].shift(1))
-    df['DC'] = (df['MACD'] < df['MACD_Signal']) & (df['MACD'].shift(1) >= df['MACD_Signal'].shift(1))
-    
-    confirm_bars = params.get("confirm_bars", 3)
-    gc_confirm = [False] * len(df)
-    
-    for i in range(confirm_bars + 1, len(df)):
-        if df['GC'].iloc[i - confirm_bars]:
-            all_above = True
-            for j in range(i - confirm_bars + 1, i + 1):
-                if df['MACD'].iloc[j] <= df['MACD_Signal'].iloc[j]:
-                    all_above = False
-                    break
-            gc_confirm[i] = all_above
-    
-    df['GC_Confirm'] = gc_confirm
-    
-    capital = initial_capital
-    shares = 0
-    position = 0
-    trades = []
-    equity_curve = []
-    
-    for i in range(30, len(df)):
-        if position:
-            equity = shares * df['Close'].iloc[i]
-        else:
-            equity = capital
-        equity_curve.append({
-            "time": str(df.index[i].date()),
-            "equity": round(equity, 2)
-        })
-        
-        if df.iloc[i]['GC_Confirm'] and position == 0:
-            shares = capital // df['Close'].iloc[i]
-            entry_price = df['Close'].iloc[i]
-            entry_date = df.index[i]
-            position = 1
-            
-        elif df.iloc[i]['DC'] and position == 1:
-            exit_price = df['Close'].iloc[i]
-            pnl = (exit_price - entry_price) / entry_price * 100
-            
-            trades.append({
-                "id": len(trades) + 1,
-                "entry_date": str(entry_date.date()),
-                "exit_date": str(df.index[i].date()),
-                "entry_price": round(entry_price, 2),
-                "exit_price": round(exit_price, 2),
-                "pnl": round(pnl, 2),
-                "win": pnl > 0
-            })
-            
-            capital = shares * exit_price
-            position = 0
-            shares = 0
-    
-    winning = [t for t in trades if t["win"]]
-    total = len(trades)
-    win_rate = len(winning) / total * 100 if total > 0 else 0
-    
-    equity_values = [e["equity"] for e in equity_curve]
-    max_equity = max(equity_values) if equity_values else initial_capital
-    drawdown = []
-    for i, eq in enumerate(equity_values):
-        peak = max(equity_values[:i+1]) if equity_values[:i+1] else eq
-        dd = (peak - eq) / peak * 100 if peak > 0 else 0
-        drawdown.append({
-            "time": equity_curve[i]["time"],
-            "drawdown": round(dd, 2)
-        })
-    
-    return {
-        "symbol": symbol,
-        "period": period,
-        "interval": interval,
-        "initial_capital": initial_capital,
-        "total_trades": total,
-        "wins": len(winning),
-        "losses": total - len(winning),
-        "win_rate": round(win_rate, 2),
-        "total_return": round((capital - initial_capital) / initial_capital * 100, 2),
-        "trades": trades,
-        "equity_curve": equity_curve,
-        "drawdown": drawdown,
-        "max_drawdown": round(max([d["drawdown"] for d in drawdown]) if drawdown else 0, 2),
-        "final_capital": round(capital, 2),
-        "params": params
-    }
+    return result
 
 
 # ============ 錯誤處理 ============

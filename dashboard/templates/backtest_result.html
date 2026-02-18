@@ -79,15 +79,84 @@
             </div>
         </div>
 
+        <!-- 參數優化器 -->
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden mb-8">
+            <div class="bg-purple-600 text-white px-6 py-4 flex justify-between items-center">
+                <h2 class="text-lg font-bold">🎯 參數優化器</h2>
+                <span class="text-sm opacity-80">根據目標勝率推薦最佳參數</span>
+            </div>
+            <div class="p-6">
+                <div class="flex flex-wrap gap-4 items-end mb-4">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">目標勝率 (%)</label>
+                        <input type="number" id="targetWinRate" value="60" min="0" max="100" 
+                               class="w-32 px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                    <button onclick="optimizeParams()" 
+                            class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded shadow">
+                        🔍 尋找最佳參數
+                    </button>
+                </div>
+                
+                <!-- 優化結果 -->
+                <div id="optimizeResult" class="hidden">
+                    <div class="border-t pt-4">
+                        <h3 class="font-bold text-lg mb-4">✨ 推薦參數</h3>
+                        
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                            <div class="bg-gray-50 p-3 rounded">
+                                <div class="text-gray-500 text-xs">MACD Fast</div>
+                                <div id="rec-macd-fast" class="text-xl font-bold text-blue-600">-</div>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded">
+                                <div class="text-gray-500 text-xs">MACD Slow</div>
+                                <div id="rec-macd-slow" class="text-xl font-bold text-blue-600">-</div>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded">
+                                <div class="text-gray-500 text-xs">MACD Signal</div>
+                                <div id="rec-macd-signal" class="text-xl font-bold text-blue-600">-</div>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded">
+                                <div class="text-gray-500 text-xs">RSI 週期</div>
+                                <div id="rec-rsi-period" class="text-xl font-bold text-purple-600">-</div>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded">
+                                <div class="text-gray-500 text-xs">確認棒數</div>
+                                <div id="rec-confirm" class="text-xl font-bold text-green-600">-</div>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded">
+                                <div class="text-gray-500 text-xs">停損倍數</div>
+                                <div id="rec-stop" class="text-xl font-bold text-red-600">-</div>
+                            </div>
+                            <div class="bg-green-50 p-3 rounded">
+                                <div class="text-green-600 text-xs">預估勝率</div>
+                                <div id="rec-winrate" class="text-xl font-bold text-green-600">-</div>
+                            </div>
+                            <div class="bg-green-50 p-3 rounded">
+                                <div class="text-green-600 text-xs">預估報酬</div>
+                                <div id="rec-return" class="text-xl font-bold text-green-600">-</div>
+                            </div>
+                        </div>
+                        
+                        <button onclick="applyRecommendedParams()" 
+                                class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded shadow">
+                            ✅ 套用這些參數
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="optimizeLoading" class="hidden text-center py-4">
+                    <span class="text-purple-600 font-bold">🔄 搜尋最佳參數中...</span>
+                </div>
+            </div>
+        </div>
+
         <!-- 圖表區域 -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-            <!-- 資金曲線 -->
             <div class="bg-white rounded-lg shadow-lg p-6">
                 <h3 class="font-bold text-lg mb-4">💰 資金曲線</h3>
                 <canvas id="equityChart" height="200"></canvas>
             </div>
-
-            <!-- 回撤曲線 -->
             <div class="bg-white rounded-lg shadow-lg p-6">
                 <h3 class="font-bold text-lg mb-4">📉 回撤曲線</h3>
                 <canvas id="drawdownChart" height="200"></canvas>
@@ -96,7 +165,7 @@
 
         <!-- 策略參數 -->
         <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
-            <h3 class="font-bold text-lg mb-4">⚙️ 使用的策略參數</h3>
+            <h3 class="font-bold text-lg mb-4">⚙️ 目前使用的策略參數</h3>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>MACD: {{ result.params.macd.fast }}, {{ result.params.macd.slow }}, {{ result.params.macd.signal }}</div>
                 <div>RSI: {{ result.params.rsi.period }} ({{ result.params.rsi.oversold }}/{{ result.params.rsi.overbought }})</div>
@@ -156,13 +225,98 @@
         </div>
     </div>
 
-    <!-- Chart.js 圖表 -->
-    {% if result and result.equity_curve %}
+    <!-- 隱藏表單用於套用參數 -->
+    <form id="applyForm" action="/backtest" method="POST" class="hidden">
+        <input type="hidden" name="symbol" value="{{ symbol }}">
+        <input type="hidden" name="period" value="{{ period }}">
+        <input type="hidden" name="interval" value="{{ interval }}">
+        <input type="hidden" name="initial_capital" value="{{ capital }}">
+        <input type="hidden" name="override" value="true">
+        <input type="hidden" name="macd_fast" id="apply-macd-fast">
+        <input type="hidden" name="macd_slow" id="apply-macd-slow">
+        <input type="hidden" name="macd_signal" id="apply-macd-signal">
+        <input type="hidden" name="rsi_period" id="apply-rsi-period">
+        <input type="hidden" name="confirm_bars" id="apply-confirm">
+        <input type="hidden" name="stop_loss_multiplier" id="apply-stop">
+    </form>
+
     <script>
+        const symbol = '{{ symbol }}';
+        const period = '{{ period }}';
+        const interval = '{{ interval }}';
+        const capital = {{ capital }};
+
+        // ============ 參數優化器 ============
+        function optimizeParams() {
+            const targetWinRate = document.getElementById('targetWinRate').value;
+            
+            document.getElementById('optimizeResult').classList.add('hidden');
+            document.getElementById('optimizeLoading').classList.remove('hidden');
+            
+            fetch('/api/optimize', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    symbol: symbol,
+                    target_win_rate: parseFloat(targetWinRate),
+                    period: period,
+                    interval: interval,
+                    initial_capital: capital
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('optimizeLoading').classList.add('hidden');
+                
+                if (data.success) {
+                    const params = data.recommended_params;
+                    const result = data.result;
+                    
+                    document.getElementById('rec-macd-fast').innerText = params.macd.fast;
+                    document.getElementById('rec-macd-slow').innerText = params.macd.slow;
+                    document.getElementById('rec-macd-signal').innerText = params.macd.signal;
+                    document.getElementById('rec-rsi-period').innerText = params.rsi.period;
+                    document.getElementById('rec-confirm').innerText = params.confirm_bars;
+                    document.getElementById('rec-stop').innerText = params.stop_loss_multiplier;
+                    document.getElementById('rec-winrate').innerText = result.win_rate + '%';
+                    document.getElementById('rec-return').innerText = result.total_return + '%';
+                    
+                    // 儲存推薦參數
+                    window.recommendedParams = params;
+                    
+                    document.getElementById('optimizeResult').classList.remove('hidden');
+                } else {
+                    alert('❌ ' + data.error);
+                }
+            })
+            .catch(err => {
+                document.getElementById('optimizeLoading').classList.add('hidden');
+                alert('❌ 優化失敗');
+            });
+        }
+
+        function applyRecommendedParams() {
+            if (!window.recommendedParams) {
+                alert('請先執行參數優化');
+                return;
+            }
+            
+            const p = window.recommendedParams;
+            document.getElementById('apply-macd-fast').value = p.macd.fast;
+            document.getElementById('apply-macd-slow').value = p.macd.slow;
+            document.getElementById('apply-macd-signal').value = p.macd.signal;
+            document.getElementById('apply-rsi-period').value = p.rsi.period;
+            document.getElementById('apply-confirm').value = p.confirm_bars;
+            document.getElementById('apply-stop').value = p.stop_loss_multiplier;
+            
+            document.getElementById('applyForm').submit();
+        }
+
+        // ============ 圖表 ============
+        {% if result and result.equity_curve %}
         const equityData = {{ result.equity_curve | tojson }};
         const drawdownData = {{ result.drawdown | tojson }};
         
-        // 資金曲線
         new Chart(document.getElementById('equityChart'), {
             type: 'line',
             data: {
@@ -178,16 +332,11 @@
             },
             options: {
                 responsive: true,
-                plugins: {
-                    legend: { display: false }
-                },
-                scales: {
-                    y: { position: 'right' }
-                }
+                plugins: { legend: { display: false } },
+                scales: { y: { position: 'right' } }
             }
         });
         
-        // 回撤曲線
         new Chart(document.getElementById('drawdownChart'), {
             type: 'line',
             data: {
@@ -203,18 +352,11 @@
             },
             options: {
                 responsive: true,
-                plugins: {
-                    legend: { display: false }
-                },
-                scales: {
-                    y: { 
-                        position: 'right',
-                        max: 0
-                    }
-                }
+                plugins: { legend: { display: false } },
+                scales: { y: { position: 'right', max: 0 } }
             }
         });
+        {% endif %}
     </script>
-    {% endif %}
 </body>
 </html>
