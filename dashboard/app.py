@@ -478,10 +478,6 @@ def run_backtest(symbol, period, interval, initial_capital=100000):
     if "error" in result:
         return result
     
-    # 加入圖表資料
-    df_copy = df.copy()
-    df_copy['Equity'] = [initial_capital]
-    
     return result
 
 
