@@ -381,12 +381,23 @@ def backtest_result():
     period = request.args.get('period', '6mo')
     interval = request.args.get('interval', '1d')
     initial_capital = int(request.args.get('capital', 100000))
+    use_symbol_params = request.args.get('use_symbol_params', 'false').lower() == 'true'
     
     if not symbol:
         return redirect(url_for('backtest'))
     
     try:
-        result = run_backtest(symbol, period, interval, initial_capital)
+        # 如果使用個別股票參數，先取得再執行回測
+        params = None
+        if use_symbol_params:
+            symbol_params = db.get_symbol_params(symbol)
+            if symbol_params:
+                params = symbol_params
+        
+        if params:
+            result = run_backtest(symbol, period, interval, initial_capital, params)
+        else:
+            result = run_backtest(symbol, period, interval, initial_capital)
     except Exception as e:
         result = {"error": f"回測發生錯誤：{str(e)}"}
     
@@ -706,17 +717,21 @@ def run_backtest_with_params(df, params, initial_capital=100000):
         return {"error": f"{str(e)}\n{traceback.format_exc()}"}
 
 
-def run_backtest(symbol, period, interval, initial_capital=100000):
-    """執行回測（使用儲存的參數）"""
+def run_backtest(symbol, period, interval, initial_capital=100000, params_override=None):
+    """執行回測（使用儲存的參數或指定的參數）"""
     import yfinance as yf
     from ta.momentum import RSIIndicator
     from ta.trend import MACD, ADXIndicator
     from ta.volatility import AverageTrueRange
     
-    params = db.get_strategy_params()
-    if params is None:
-        from config import STRATEGY_PARAMS
-        params = STRATEGY_PARAMS
+    # 如果有指定參數則使用，否則從資料庫取得
+    if params_override:
+        params = params_override
+    else:
+        params = db.get_strategy_params()
+        if params is None:
+            from config import STRATEGY_PARAMS
+            params = STRATEGY_PARAMS
     
     try:
         df = yf.Ticker(symbol).history(period=period, interval=interval)
