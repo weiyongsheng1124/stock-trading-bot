@@ -85,7 +85,10 @@ def api_live_chart(symbol):
         if df is None or len(df) < 10:
             return jsonify({"error": "無法取得資料"})
         
-        params = db.get_strategy_params() or STRATEGY_PARAMS
+        # 使用個別股票策略，如果沒有則使用預設參數
+        params = db.get_symbol_params(symbol)
+        if params is None:
+            params = STRATEGY_PARAMS
         
         macd = MACD(df['Close'], 
                      window_slow=params["macd"]["slow"],
@@ -184,40 +187,13 @@ def api_remove_symbol():
 
 # ============ 策略配置頁 ============
 
-@app.route('/config', methods=['GET', 'POST'])
+@app.route('/config')
 def config():
-    if request.method == 'POST':
-        params = {
-            "macd": {
-                "fast": int(request.form.get('macd_fast', 12)),
-                "slow": int(request.form.get('macd_slow', 26)),
-                "signal": int(request.form.get('macd_signal', 9))
-            },
-            "rsi": {
-                "period": int(request.form.get('rsi_period', 14)),
-                "oversold": int(request.form.get('rsi_oversold', 30)),
-                "overbought": int(request.form.get('rsi_overbought', 70))
-            },
-            "adx": {
-                "period": int(request.form.get('adx_period', 14)),
-                "threshold": int(request.form.get('adx_threshold', 20))
-            },
-            "atr": {
-                "period": int(request.form.get('atr_period', 14))
-            },
-            "confirm_bars": int(request.form.get('confirm_bars', 3)),
-            "stop_loss_multiplier": float(request.form.get('stop_loss_multiplier', 2.0)),
-            "new_high_period": int(request.form.get('new_high_period', 252))
-        }
-        
-        db.save_strategy_params(params)
-        return render_template('config.html', params=params, success=True, all_params=db.get_all_symbol_params())
-    
-    current_params = db.get_strategy_params()
-    if current_params is None:
-        current_params = STRATEGY_PARAMS
-    
-    return render_template('config.html', params=current_params, all_params=db.get_all_symbol_params())
+    """策略配置頁 - 重定向到第一個監控股票"""
+    symbols = db.get_monitor_symbols()
+    if symbols and len(symbols) > 0:
+        return redirect(url_for('config_symbol', symbol=symbols[0]))
+    return redirect(url_for('monitor'))
 
 
 # ============ 個別股票策略配置 ============
@@ -287,7 +263,7 @@ def api_symbol_params(symbol):
     """取得個別股票參數 API"""
     params = db.get_symbol_params(symbol)
     if params is None:
-        params = db.get_strategy_params() or STRATEGY_PARAMS
+        params = STRATEGY_PARAMS
     return jsonify({"symbol": symbol.upper(), "params": params})
 
 
@@ -328,10 +304,10 @@ def backtest():
             if symbol_params:
                 params = symbol_params
             else:
-                params = db.get_strategy_params() or STRATEGY_PARAMS
+                params = STRATEGY_PARAMS
         else:
-            # 使用全局策略
-            params = db.get_strategy_params() or STRATEGY_PARAMS
+            # 使用預設策略
+            params = STRATEGY_PARAMS
         
         # 如果有override參數，使用表單中的值
         if 'override' in request.form:
@@ -368,7 +344,7 @@ def backtest():
     
     symbols = db.get_monitor_symbols()
     all_params = db.get_all_symbol_params()
-    default_params = db.get_strategy_params() or STRATEGY_PARAMS
+    default_params = STRATEGY_PARAMS
     return render_template('backtest.html', 
                          symbols=symbols, 
                          params=default_params,
@@ -724,14 +700,11 @@ def run_backtest(symbol, period, interval, initial_capital=100000, params_overri
     from ta.trend import MACD, ADXIndicator
     from ta.volatility import AverageTrueRange
     
-    # 如果有指定參數則使用，否則從資料庫取得
+    # 如果有指定參數則使用，否則使用預設參數
     if params_override:
         params = params_override
     else:
-        params = db.get_strategy_params()
-        if params is None:
-            from config import STRATEGY_PARAMS
-            params = STRATEGY_PARAMS
+        params = STRATEGY_PARAMS
     
     try:
         df = yf.Ticker(symbol).history(period=period, interval=interval)

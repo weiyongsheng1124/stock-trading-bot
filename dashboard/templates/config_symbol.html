@@ -16,20 +16,14 @@
                 </div>
                 <div class="flex items-center space-x-4">
                     <a href="/monitor" class="px-4 py-2 hover:text-gray-300">即時監控</a>
-                    <a href="/config" class="px-4 py-2 hover:text-gray-300">全局配置</a>
-                    <a href="/config/{{ symbol }}" class="bg-blue-600 px-4 py-2 rounded">{{ symbol }}</a>
                     <a href="/backtest" class="px-4 py-2 hover:text-gray-300">回測</a>
+                    <a href="/config/{{ symbol }}" class="bg-blue-600 px-4 py-2 rounded">{{ symbol }}</a>
                 </div>
             </div>
         </div>
     </nav>
 
     <div class="max-w-4xl mx-auto px-4 py-8">
-        <!-- 返回連結 -->
-        <div class="mb-6">
-            <a href="/config" class="text-blue-600 hover:text-blue-800">← 返回全局配置</a>
-        </div>
-
         <!-- 成功訊息 -->
         {% if success %}
         <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
@@ -40,7 +34,7 @@
         <!-- 股票選擇 -->
         <div class="bg-white rounded-lg shadow-lg overflow-hidden mb-6">
             <div class="bg-blue-600 text-white px-6 py-4">
-                <h2 class="text-lg font-bold">📊 選擇股票</h2>
+                <h2 class="text-lg font-bold">📊 {{ symbol }} 參數配置</h2>
             </div>
             <div class="p-4">
                 <div class="flex flex-wrap gap-2">
