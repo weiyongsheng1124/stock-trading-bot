@@ -420,47 +420,68 @@
         
         // 股價走勢圖（買賣點標記）
         if ((buySignals && buySignals.length > 0) || (sellSignals && sellSignals.length > 0)) {
-            const buyPoints = (buySignals || []).map(b => ({x: b.index, y: b.price}));
-            const sellPoints = (sellSignals || []).map(s => ({x: s.index, y: s.price}));
-            
             // 股價資料
             const priceData = {{ result.price_data | tojson }};
+            const buySignalsData = buySignals || [];
+            const sellSignalsData = sellSignals || [];
+            
+            // 建立時間到股價的映射
+            const priceMap = {};
+            priceData.forEach((p, index) => {
+                priceMap[p.time] = p.close;
+            });
+            
+            // 股價線資料
+            const priceLine = priceData.map(p => ({
+                x: p.time,
+                y: p.close
+            }));
+            
+            // 買入點
+            const buyPoints = buySignalsData.map(b => ({
+                x: b.time,
+                y: priceMap[b.time] || b.price
+            }));
+            
+            // 賣出點
+            const sellPoints = sellSignalsData.map(s => ({
+                x: s.time,
+                y: priceMap[s.time] || s.price
+            }));
             
             new Chart(document.getElementById('priceChart'), {
-                type: 'line',
+                type: 'scatter',
                 data: {
-                    labels: priceData.map(p => p.time),
                     datasets: [
                         {
                             label: '股價',
-                            data: priceData.map((p, index) => ({x: index, y: p.close})),
+                            data: priceLine,
                             borderColor: '#374151',
                             backgroundColor: 'transparent',
+                            showLine: true,
                             borderWidth: 2,
-                            tension: 0.1,
                             pointRadius: 0,
+                            tension: 0.1,
                             order: 2
                         },
                         {
                             label: '買入',
                             data: buyPoints,
-                            backgroundColor: '#ef4444',  // 紅色 - 買入後期待上漲
+                            backgroundColor: '#ef4444',
                             borderColor: '#ef4444',
                             pointStyle: 'triangle',
-                            pointRadius: 10,
+                            pointRadius: 12,
                             pointRotation: 0,
-                            showLine: false,
                             order: 1
                         },
                         {
                             label: '賣出',
                             data: sellPoints,
-                            backgroundColor: '#22c55e',  // 綠色 - 賣出後期待下跌
+                            backgroundColor: '#22c55e',
                             borderColor: '#22c55e',
                             pointStyle: 'triangle',
-                            pointRadius: 10,
+                            pointRadius: 12,
                             pointRotation: 180,
-                            showLine: false,
                             order: 1
                         }
                     ]
@@ -470,22 +491,24 @@
                     plugins: {
                         legend: { display: false },
                         tooltip: {
-                            mode: 'index',
-                            intersect: false
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': $' + context.parsed.y.toFixed(2);
+                                }
+                            }
                         }
                     },
                     scales: {
-                        x: { 
+                        x: {
                             type: 'category',
+                            labels: priceData.map(p => p.time),
                             grid: { display: false },
                             ticks: { maxTicksLimit: 20 }
                         },
-                        y: { position: 'right' }
-                    },
-                    interaction: {
-                        mode: 'nearest',
-                        axis: 'x',
-                        intersect: false
+                        y: { 
+                            position: 'right',
+                            title: { display: true, text: '股價' }
+                        }
                     }
                 }
             });
