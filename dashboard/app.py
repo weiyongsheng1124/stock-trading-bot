@@ -489,24 +489,24 @@ def run_backtest_with_params(df, params, initial_capital=100000):
             elif df.iloc[i]['DC'] and position == 1:
                 exit_price = current_price
                 exit_date = df.index[i]
-                pnl = (exit_price - entry_price) / entry_price * 100
+                pnl_pct = (exit_price - entry_price) / entry_price * 100
                 
                 trades.append({
                     "id": len(trades) + 1,
                     "entry_date": str(entry_date.date()),
                     "exit_date": current_time,
-                    "entry_price": round(entry_price, 2),
-                    "exit_price": round(exit_price, 2),
-                    "pnl": round(pnl, 2),
-                    "win": pnl > 0
+                    "entry_price": float(round(entry_price, 2)),
+                    "exit_price": float(round(exit_price, 2)),
+                    "pnl": float(round(pnl_pct, 2)),
+                    "win": pnl_pct > 0
                 })
                 
                 # 記錄賣出點
                 sell_signals.append({
                     "time": current_time,
-                    "price": round(exit_price, 2),
+                    "price": float(round(exit_price, 2)),
                     "index": i,
-                    "pnl": round(pnl, 2)
+                    "pnl": float(round(pnl_pct, 2))
                 })
                 
                 # 更新資金
