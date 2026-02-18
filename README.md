@@ -55,11 +55,9 @@ stock-trading-bot/
 ├── mongo_manager.py       # MongoDB 操作
 ├── telegram_bot.py        # Telegram 機器人
 ├── requirements.txt       # 依賴套件
-├── railway.json          # Railway 部署設定
 ├── dashboard/
 │   ├── app.py           # Flask 伺服器
-│   ├── templates/        # HTML 範本
-│   └── static/          # 靜態資源
+│   └── templates/        # HTML 範本
 └── README.md
 ```
 
@@ -119,30 +117,47 @@ stock-trading-bot/
 
 ## 🖥️ Railway 部署
 
-### 1. 建立 Railway 專案
+### 1. 安裝 Railway CLI
 
 ```bash
-# 安裝 Railway CLI
 npm i -g @railway/cli
+```
 
-# 登入
+### 2. 登入並建立專案
+
+```bash
 railway login
-
-# 建立專案
 railway init
 ```
 
-### 2. 設定環境變數
+### 3. 設定環境變數
 
-在 Railway Dashboard 設定：
-- `MONGODB_URI`
-- `TELEGRAM_TOKEN`
-- `TELEGRAM_CHAT_ID`
+在 Railway Dashboard 點擊 **Variables** 頁籤，新增：
 
-### 3. 部署
+```
+MONGODB_URI=mongodb+srv://...
+TELEGRAM_TOKEN=your_bot_token
+TELEGRAM_CHAT_ID=your_chat_id
+```
+
+### 4. 部署
 
 ```bash
 railway up
+```
+
+### 5. 啟動服務
+
+在 Railway Dashboard 的 **Settings** → **Start Command** 設定：
+
+```
+python bot.py
+```
+
+如需 Web Dashboard，另建立一個服務：
+
+```
+python dashboard/app.py
 ```
 
 ---
@@ -184,7 +199,5 @@ NO_POSITION (無持倉)
 - MongoDB 儲存
 
 ---
-
-## 📧 聯繫
 
 如有問題，請聯繫開發者。
