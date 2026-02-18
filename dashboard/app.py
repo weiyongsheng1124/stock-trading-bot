@@ -444,13 +444,17 @@ def run_backtest_with_params(df, params, initial_capital=100000):
         
         # 執行回測
         initial_capital_float = float(initial_capital)
-        capital = initial_capital_float
-        shares = 0
-        position = 0
+        cash = initial_capital_float  # 現金
+        shares = 0  # 股數
+        position = 0  # 是否持有部位
+        entry_price = 0  # 買入價格
         trades = []
-        equity_curve = []  # 資金曲線（相對於初始資金的比例）
+        equity_curve = []  # 資金曲線（總資產 = 現金 + 股票價值）
         buy_signals = []  # 買入點
         sell_signals = []  # 賣出點
+        
+        # 固定倉位比例（50%）
+        position_size = 0.5
         
         # 從有足夠歷史資料的地方開始
         start_idx = 30  # 避開前面需要計算指標的資料
@@ -459,11 +463,11 @@ def run_backtest_with_params(df, params, initial_capital=100000):
             current_price = float(df['Close'].iloc[i])
             current_time = str(df.index[i].date())
             
-            # 記錄資金（每天都記錄，相對於初始資金的比例）
+            # 計算總資產（現金 + 股票價值）
             if position:
-                current_equity = shares * current_price
+                current_equity = cash + shares * current_price
             else:
-                current_equity = capital
+                current_equity = cash
             
             # 記錄為相對於初始資金的比例 (%)
             equity_pct = (current_equity - initial_capital_float) / initial_capital_float * 100
@@ -475,12 +479,13 @@ def run_backtest_with_params(df, params, initial_capital=100000):
             
             # 買入訊號
             if df.iloc[i]['GC_Confirm'] and position == 0:
-                # 計算買入股數（固定比例：50% 倉位）
-                position_size = 0.5  # 50% 倉位
+                # 計算買入股數（基於初始資金的50%）
+                buy_amount = initial_capital_float * position_size
                 if current_price > 0:
-                    shares = int((initial_capital_float * position_size) // current_price)
+                    shares = int(buy_amount // current_price)
+                    cost = shares * current_price
+                    cash = initial_capital_float - cost  # 剩下的是現金
                 entry_price = current_price
-                entry_date = df.index[i]
                 position = 1
                 
                 # 記錄買入點
@@ -494,6 +499,8 @@ def run_backtest_with_params(df, params, initial_capital=100000):
             elif df.iloc[i]['DC'] and position == 1:
                 exit_price = current_price
                 exit_date = df.index[i]
+                
+                # 計算此筆交易的報酬率
                 pnl_pct = (exit_price - entry_price) / entry_price * 100
                 is_win = pnl_pct > 0
                 
@@ -515,10 +522,10 @@ def run_backtest_with_params(df, params, initial_capital=100000):
                     "pnl": float(round(pnl_pct, 2))
                 })
                 
-                # 更新資金
-                capital = shares * exit_price
-                position = 0
+                # 賣出股票，回收現金
+                cash = shares * exit_price + (initial_capital_float - shares * entry_price)
                 shares = 0
+                position = 0
         
         # 統計
         total = len(trades)
@@ -569,7 +576,7 @@ def run_backtest_with_params(df, params, initial_capital=100000):
             "price_data": price_data,
             "drawdown": drawdown,
             "max_drawdown": round(max_dd, 2),
-            "final_capital": round(equity_curve[-1]["equity"] if equity_curve else initial_capital_float, 2),
+            "final_capital": round(cash, 2),
             "params": params
         }
         
