@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>股票交易機器人 - 策略配置</title>
+    <title>股票交易機器人 - {{ symbol }} 策略配置</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -16,7 +16,8 @@
                 </div>
                 <div class="flex items-center space-x-4">
                     <a href="/monitor" class="px-4 py-2 hover:text-gray-300">即時監控</a>
-                    <a href="/config" class="bg-blue-600 px-4 py-2 rounded">策略配置</a>
+                    <a href="/config" class="px-4 py-2 hover:text-gray-300">全局配置</a>
+                    <a href="/config/{{ symbol }}" class="bg-blue-600 px-4 py-2 rounded">{{ symbol }}</a>
                     <a href="/backtest" class="px-4 py-2 hover:text-gray-300">回測</a>
                 </div>
             </div>
@@ -24,39 +25,41 @@
     </nav>
 
     <div class="max-w-4xl mx-auto px-4 py-8">
+        <!-- 返回連結 -->
+        <div class="mb-6">
+            <a href="/config" class="text-blue-600 hover:text-blue-800">← 返回全局配置</a>
+        </div>
+
         <!-- 成功訊息 -->
         {% if success %}
         <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
-            ✅ 參數已儲存成功！
+            ✅ {{ symbol }} 參數已儲存成功！
         </div>
         {% endif %}
 
-        <!-- 已自訂參數的股票 -->
-        {% if all_params %}
+        <!-- 股票選擇 -->
         <div class="bg-white rounded-lg shadow-lg overflow-hidden mb-6">
-            <div class="bg-yellow-600 text-white px-6 py-4">
-                <h2 class="text-lg font-bold">⭐ 已自訂參數的股票</h2>
-                <p class="text-sm opacity-80">點擊可編輯個別設定</p>
+            <div class="bg-blue-600 text-white px-6 py-4">
+                <h2 class="text-lg font-bold">📊 選擇股票</h2>
             </div>
             <div class="p-4">
                 <div class="flex flex-wrap gap-2">
-                    {% for s, data in all_params.items() %}
+                    {% for s in all_symbols %}
                     <a href="/config/{{ s }}" 
-                       class="px-4 py-2 rounded bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border border-yellow-400">
+                       class="px-4 py-2 rounded {% if s == symbol %}bg-blue-600 text-white{% else %}bg-gray-200 text-gray-700 hover:bg-gray-300{% endif %}">
                         {{ s }}
                     </a>
                     {% endfor %}
                 </div>
             </div>
         </div>
-        {% endif %}
 
-        <form method="POST" action="/config">
+        <form method="POST" action="/config/{{ symbol }}">
             <!-- MACD 參數 -->
             <div class="bg-white rounded-lg shadow-lg overflow-hidden mb-6">
                 <div class="bg-blue-600 text-white px-6 py-4">
                     <h2 class="text-lg font-bold">📊 MACD 參數</h2>
-                    <p class="text-sm opacity-80">平滑異同移動平均線</p>
+                    <p class="text-sm opacity-80">{{ symbol }} 專用設定</p>
                 </div>
                 <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
@@ -81,7 +84,7 @@
             <div class="bg-white rounded-lg shadow-lg overflow-hidden mb-6">
                 <div class="bg-purple-600 text-white px-6 py-4">
                     <h2 class="text-lg font-bold">📉 RSI 參數</h2>
-                    <p class="text-sm opacity-80">相對強弱指數</p>
+                    <p class="text-sm opacity-80">{{ symbol }} 專用設定</p>
                 </div>
                 <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
@@ -93,13 +96,11 @@
                         <label class="block text-gray-700 text-sm font-bold mb-2">超賣門檻</label>
                         <input type="number" name="rsi_oversold" value="{{ params.rsi.oversold }}" 
                                class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500" min="0" max="100">
-                        <p class="text-xs text-gray-500 mt-1">RSI 低於此值視為超賣</p>
                     </div>
                     <div>
                         <label class="block text-gray-700 text-sm font-bold mb-2">超買門檻</label>
                         <input type="number" name="rsi_overbought" value="{{ params.rsi.overbought }}" 
                                class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500" min="0" max="100">
-                        <p class="text-xs text-gray-500 mt-1">RSI 高於此值視為超買</p>
                     </div>
                 </div>
             </div>
@@ -108,7 +109,7 @@
             <div class="bg-white rounded-lg shadow-lg overflow-hidden mb-6">
                 <div class="bg-indigo-600 text-white px-6 py-4">
                     <h2 class="text-lg font-bold">📈 ADX 參數</h2>
-                    <p class="text-sm opacity-80">平均趨向指數</p>
+                    <p class="text-sm opacity-80">{{ symbol }} 專用設定</p>
                 </div>
                 <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
@@ -120,7 +121,6 @@
                         <label class="block text-gray-700 text-sm font-bold mb-2">趨勢門檻</label>
                         <input type="number" name="adx_threshold" value="{{ params.adx.threshold }}" 
                                class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500" min="0" max="100">
-                        <p class="text-xs text-gray-500 mt-1">ADX 高於此值表示有趨勢</p>
                     </div>
                 </div>
             </div>
@@ -129,7 +129,7 @@
             <div class="bg-white rounded-lg shadow-lg overflow-hidden mb-6">
                 <div class="bg-green-600 text-white px-6 py-4">
                     <h2 class="text-lg font-bold">🛡️ ATR 風控參數</h2>
-                    <p class="text-sm opacity-80">平均真實波幅</p>
+                    <p class="text-sm opacity-80">{{ symbol }} 專用設定</p>
                 </div>
                 <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
@@ -141,13 +141,11 @@
                         <label class="block text-gray-700 text-sm font-bold mb-2">停損倍數</label>
                         <input type="number" name="stop_loss_multiplier" value="{{ params.stop_loss_multiplier }}" 
                                class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-green-500" step="0.1" min="0.1">
-                        <p class="text-xs text-gray-500 mt-1">停損 = 買入價 - 2 × ATR</p>
                     </div>
                     <div>
                         <label class="block text-gray-700 text-sm font-bold mb-2">新高計算週期</label>
                         <input type="number" name="new_high_period" value="{{ params.new_high_period }}" 
                                class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-green-500" min="1">
-                        <p class="text-xs text-gray-500 mt-1">計算近 N 日新高</p>
                     </div>
                 </div>
             </div>
@@ -156,25 +154,41 @@
             <div class="bg-white rounded-lg shadow-lg overflow-hidden mb-6">
                 <div class="bg-yellow-600 text-white px-6 py-4">
                     <h2 class="text-lg font-bold">⚙️ 其他參數</h2>
+                    <p class="text-sm opacity-80">{{ symbol }} 專用設定</p>
                 </div>
                 <div class="p-6">
                     <div>
                         <label class="block text-gray-700 text-sm font-bold mb-2">黃金交叉確認棒數</label>
                         <input type="number" name="confirm_bars" value="{{ params.confirm_bars }}" 
                                class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-yellow-500" min="1" max="10">
-                        <p class="text-xs text-gray-500 mt-1">黃金交叉後需幾根 K 棒確認 (DIF 持續在 DEA 上方)</p>
                     </div>
                 </div>
             </div>
 
             <!-- 提交按鈕 -->
-            <div class="flex justify-end">
-                <button type="submit" 
-                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transform hover:scale-105 transition duration-200">
-                    💾 儲存參數
+            <div class="flex justify-between">
+                <button type="button" onclick="resetToDefault()" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg">
+                    🔄 恢復預設值
+                </button>
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg">
+                    💾 儲存 {{ symbol }} 參數
                 </button>
             </div>
         </form>
     </div>
+
+    <script>
+        function resetToDefault() {
+            if (confirm('確定要將 {{ symbol }} 的參數恢復為全局預設值嗎？')) {
+                fetch('/api/symbol_params/{{ symbol }}', { method: 'DELETE' })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            location.reload();
+                        }
+                    });
+            }
+        }
+    </script>
 </body>
 </html>

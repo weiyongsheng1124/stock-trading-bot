@@ -12,6 +12,7 @@ SIGNALS_FILE = os.path.join(DATA_DIR, "signals.json")
 LOGS_FILE = os.path.join(DATA_DIR, "logs.json")
 CONFIG_FILE = os.path.join(DATA_DIR, "strategy_config.json")
 SYMBOLS_FILE = os.path.join(DATA_DIR, "monitor_symbols.json")
+SYMBOL_PARAMS_FILE = os.path.join(DATA_DIR, "symbol_params.json")
 
 # 確保數據目錄存在
 os.makedirs(DATA_DIR, exist_ok=True)

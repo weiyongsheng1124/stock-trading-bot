@@ -211,13 +211,104 @@ def config():
         }
         
         db.save_strategy_params(params)
-        return render_template('config.html', params=params, success=True)
+        return render_template('config.html', params=params, success=True, all_params=db.get_all_symbol_params())
     
     current_params = db.get_strategy_params()
     if current_params is None:
         current_params = STRATEGY_PARAMS
     
-    return render_template('config.html', params=current_params)
+    return render_template('config.html', params=current_params, all_params=db.get_all_symbol_params())
+
+
+# ============ 個別股票策略配置 ============
+
+@app.route('/config/<symbol>')
+def config_symbol(symbol):
+    """個別股票策略配置頁"""
+    symbol = symbol.upper()
+    params = db.get_symbol_params(symbol)
+    if params is None:
+        params = db.get_strategy_params() or STRATEGY_PARAMS
+    
+    all_symbols = db.get_monitor_symbols()
+    all_params = db.get_all_symbol_params()
+    
+    return render_template(
+        'config_symbol.html', 
+        symbol=symbol, 
+        params=params,
+        all_symbols=all_symbols,
+        all_params=all_params
+    )
+
+
+@app.route('/config/<symbol>', methods=['POST'])
+def config_symbol_save(symbol):
+    """儲存個別股票策略參數"""
+    symbol = symbol.upper()
+    
+    params = {
+        "macd": {
+            "fast": int(request.form.get('macd_fast', 12)),
+            "slow": int(request.form.get('macd_slow', 26)),
+            "signal": int(request.form.get('macd_signal', 9))
+        },
+        "rsi": {
+            "period": int(request.form.get('rsi_period', 14)),
+            "oversold": int(request.form.get('rsi_oversold', 30)),
+            "overbought": int(request.form.get('rsi_overbought', 70))
+        },
+        "adx": {
+            "period": int(request.form.get('adx_period', 14)),
+            "threshold": int(request.form.get('adx_threshold', 20))
+        },
+        "atr": {
+            "period": int(request.form.get('atr_period', 14))
+        },
+        "confirm_bars": int(request.form.get('confirm_bars', 3)),
+        "stop_loss_multiplier": float(request.form.get('stop_loss_multiplier', 2.0)),
+        "new_high_period": int(request.form.get('new_high_period', 252))
+    }
+    
+    db.save_symbol_params(symbol, params)
+    
+    return render_template(
+        'config_symbol.html',
+        symbol=symbol,
+        params=params,
+        all_symbols=db.get_monitor_symbols(),
+        all_params=db.get_all_symbol_params(),
+        success=True
+    )
+
+
+@app.route('/api/symbol_params/<symbol>')
+def api_symbol_params(symbol):
+    """取得個別股票參數 API"""
+    params = db.get_symbol_params(symbol)
+    if params is None:
+        params = db.get_strategy_params() or STRATEGY_PARAMS
+    return jsonify({"symbol": symbol.upper(), "params": params})
+
+
+@app.route('/api/symbol_params/<symbol>', methods=['POST'])
+def api_save_symbol_params(symbol):
+    """儲存個別股票參數 API"""
+    data = request.get_json()
+    params = data.get('params')
+    
+    if params:
+        db.save_symbol_params(symbol.upper(), params)
+        return jsonify({"success": True, "symbol": symbol.upper()})
+    
+    return jsonify({"success": False, "error": "無參數資料"})
+
+
+@app.route('/api/symbol_params/<symbol>', methods=['DELETE'])
+def api_delete_symbol_params(symbol):
+    """刪除個別股票參數 API"""
+    db.delete_symbol_params(symbol.upper())
+    return jsonify({"success": True})
 
 
 # ============ 回測頁 ============

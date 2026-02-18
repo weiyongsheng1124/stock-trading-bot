@@ -8,7 +8,7 @@ from datetime import datetime
 from config import (
     POSITIONS_FILE, TRADES_FILE, SIGNALS_FILE, 
     LOGS_FILE, CONFIG_FILE, DATA_DIR, TradingState,
-    SYMBOLS_FILE, DEFAULT_SYMBOLS
+    SYMBOLS_FILE, SYMBOL_PARAMS_FILE, DEFAULT_SYMBOLS
 )
 
 
@@ -30,6 +30,11 @@ class JsonManager:
         if not os.path.exists(SYMBOLS_FILE):
             with open(SYMBOLS_FILE, 'w', encoding='utf-8') as f:
                 json.dump({"symbols": DEFAULT_SYMBOLS}, f, ensure_ascii=False)
+        
+        # 確保個別股票參數文件存在
+        if not os.path.exists(SYMBOL_PARAMS_FILE):
+            with open(SYMBOL_PARAMS_FILE, 'w', encoding='utf-8') as f:
+                json.dump({"symbols": {}}, f, ensure_ascii=False)
         
         # 讀取策略配置
         if not os.path.exists(CONFIG_FILE):
@@ -319,6 +324,54 @@ class JsonManager:
             return config.get("params")
         except:
             return None
+    
+    # ============ 個別股票策略配置 ============
+    
+    def save_symbol_params(self, symbol, params):
+        """儲存個別股票的策略參數"""
+        try:
+            data = self._read_json(SYMBOL_PARAMS_FILE)
+            symbol = symbol.upper()
+            data["symbols"][symbol] = {
+                "params": params,
+                "updated_at": datetime.now().isoformat()
+            }
+            self._write_json(SYMBOL_PARAMS_FILE, data)
+            return True
+        except Exception as e:
+            print(f"儲存股票參數失敗: {e}")
+            return False
+    
+    def get_symbol_params(self, symbol):
+        """取得個別股票的策略參數"""
+        try:
+            data = self._read_json(SYMBOL_PARAMS_FILE)
+            symbol = symbol.upper()
+            if symbol in data.get("symbols", {}):
+                return data["symbols"][symbol].get("params")
+            return None
+        except:
+            return None
+    
+    def get_all_symbol_params(self):
+        """取得所有股票的個別參數"""
+        try:
+            data = self._read_json(SYMBOL_PARAMS_FILE)
+            return data.get("symbols", {})
+        except:
+            return {}
+    
+    def delete_symbol_params(self, symbol):
+        """刪除個別股票的策略參數"""
+        try:
+            data = self._read_json(SYMBOL_PARAMS_FILE)
+            symbol = symbol.upper()
+            if symbol in data.get("symbols", {}):
+                del data["symbols"][symbol]
+                self._write_json(SYMBOL_PARAMS_FILE, data)
+            return True
+        except:
+            return False
     
     # ============ 監控股票管理 ============
     
