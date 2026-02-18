@@ -390,7 +390,12 @@
             options: {
                 responsive: true,
                 plugins: { legend: { display: false } },
-                scales: { y: { position: 'right', max: 0 } }
+                scales: { 
+                    y: { 
+                        position: 'right',
+                        title: { display: true, text: '回撤 %' }
+                    }
+                }
             }
         });
         
