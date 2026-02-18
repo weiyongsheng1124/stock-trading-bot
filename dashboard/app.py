@@ -455,7 +455,7 @@ def run_backtest_with_params(df, params, initial_capital=100000):
         sell_signals = []  # 賣出點
         
         # 固定倉位比例（50%）
-        position_size = 0.5
+        position_size = 1.0
         
         # 從有足夠歷史資料的地方開始
         start_idx = 30  # 避開前面需要計算指標的資料
