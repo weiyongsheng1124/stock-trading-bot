@@ -1,3 +1,0 @@
-# Dashboard Procfile
-# 使用方式：建立 Railway 服務時指定這個 Procfile
-web: pip install --no-cache-dir -r requirements.txt && python dashboard/app.py

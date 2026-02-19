@@ -1,3 +1,0 @@
-# Bot Procfile
-# 使用方式：建立 Railway 服務時指定這個 Procfile
-bot: pip install --no-cache-dir -r requirements.txt && python bot.py
