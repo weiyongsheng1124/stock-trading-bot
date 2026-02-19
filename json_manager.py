@@ -314,6 +314,8 @@ class JsonManager:
         """取得策略參數"""
         try:
             config = self._read_json(CONFIG_FILE)
+            if not isinstance(config, dict):
+                return None
             return config.get("params")
         except:
             return None
@@ -324,18 +326,22 @@ class JsonManager:
         """設定是否忽略買入/賣出訊號"""
         try:
             config = self._read_json(CONFIG_FILE)
+            if not isinstance(config, dict):
+                config = {}
             config["ignore_signals"] = ignore
             config["ignore_updated_at"] = datetime.now().isoformat()
             self._write_json(CONFIG_FILE, config)
             return True
         except Exception as e:
-            logger.error(f"設定 ignore_signals 失敗: {e}")
+            print(f"設定 ignore_signals 失敗: {e}")
             return False
     
     def get_ignore_signals(self) -> bool:
         """取得是否忽略買入/賣出訊號"""
         try:
             config = self._read_json(CONFIG_FILE)
+            if not isinstance(config, dict):
+                return False
             return config.get("ignore_signals", False)
         except:
             return False
