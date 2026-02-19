@@ -658,7 +658,7 @@ def run_backtest_with_params(df, params, initial_capital=100000):
                 buy_signals.append({
                     "time": current_time,
                     "price": float(round(entry_price, 2)),
-                    "index": i
+                    "index": i - start_idx  # 改為相對於 price_data 的索引
                 })
                 
             # 賣出訊號
@@ -684,7 +684,7 @@ def run_backtest_with_params(df, params, initial_capital=100000):
                 sell_signals.append({
                     "time": current_time,
                     "price": float(round(exit_price, 2)),
-                    "index": i,
+                    "index": i - start_idx,  # 改為相對於 price_data 的索引
                     "pnl": float(round(pnl_pct, 2))
                 })
                 
