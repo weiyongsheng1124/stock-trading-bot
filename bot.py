@@ -16,6 +16,7 @@ from config import (
     COOLDOWN_HOURS, 
     TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, ENABLE_TELEGRAM_BOT, DEFAULT_SYMBOLS
 )
+from indicators import TechnicalIndicators
 from json_manager import JsonManager
 
 # 設定日誌
@@ -30,6 +31,7 @@ class StockTradingBot:
     """股票交易機器人"""
     
     def __init__(self):
+        self.indicators = TechnicalIndicators(STRATEGY_PARAMS)
         # 從 JSON 取得監控股票清單
         from json_manager import JsonManager
         self.db = JsonManager()
@@ -88,121 +90,48 @@ class StockTradingBot:
     
     def check_buy_signal(self, df, symbol):
         """檢查買入訊號 - 使用與回測相同的決策方法"""
-        from indicators import TechnicalIndicators
-        
-        # 使用回測參數
-        params = {
-            "macd": {"fast": 12, "slow": 26, "signal": 9},
-            "rsi": {"period": 14, "oversold": 30, "overbought": 70},
-            "adx": {"period": 14, "threshold": 15},
-            "atr": {"period": 14},
-            "confirm_bars": 3
-        }
-        confirm_bars = params.get("confirm_bars", 3)
-        
         # 計算指標
-        from ta.momentum import RSIIndicator
-        from ta.trend import MACD
-        from ta.volatility import AverageTrueRange
+        df_calc = self.indicators.calculate(df)
         
-        df_calc = df.copy()
+        # 使用 should_buy 判斷
+        buy_signal = self.indicators.should_buy(df_calc)
         
-        # MACD
-        macd = MACD(df_calc['Close'], 
-                    window_slow=params["macd"]["slow"],
-                    window_fast=params["macd"]["fast"], 
-                    window_sign=params["macd"]["signal"])
-        df_calc['MACD'] = macd.macd().fillna(0)
-        df_calc['MACD_Signal'] = macd.macd_signal().fillna(0)
-        
-        # RSI
-        df_calc['RSI'] = RSIIndicator(df_calc['Close'], window=params["rsi"]["period"]).rsi().fillna(50)
-        
-        # ADX
-        from ta.trend import ADXIndicator
-        adx_indicator = ADXIndicator(df_calc['High'], df_calc['Low'], df_calc['Close'], window=params["adx"]["period"])
-        df_calc['ADX'] = adx_indicator.adix().fillna(20)
-        
-        # 買賣訊號
-        df_calc['GC'] = (df_calc['MACD'] > df_calc['MACD_Signal']) & (df_calc['MACD'].shift(1) <= df_calc['MACD_Signal'].shift(1))
-        
-        # 黃金交叉確認：過去 N 棒都滿足 MACD > Signal
-        gc_confirm = [False] * len(df_calc)
-        for i in range(confirm_bars + 1, len(df_calc)):
-            if df_calc['GC'].iloc[i - confirm_bars]:
-                all_above = True
-                for j in range(i - confirm_bars + 1, i + 1):
-                    if df_calc['MACD'].iloc[j] <= df_calc['MACD_Signal'].iloc[j]:
-                        all_above = False
-                        break
-                gc_confirm[i] = all_above
+        if not buy_signal["should_buy"]:
+            logger.debug(f"{symbol}: 買入分數不足 ({buy_signal['score']}/4)")
+            return None
         
         current_idx = len(df_calc) - 1
         current_price = df_calc['Close'].iloc[current_idx]
-        current_rsi = df_calc['RSI'].iloc[current_idx]
-        current_adx = df_calc['ADX'].iloc[current_idx]
         
-        # 決策方法：根據分數
-        # - MACD 黃金交叉確認：+2 分（必要條件）
-        # - RSI < 50：+1 分
-        # - ADX > 15：+1 分
+        # 計算停損
+        stop_loss_info = self.indicators.calculate_stop_loss(df_calc, current_price, current_idx)
         
-        score = 0
-        reasons = []
+        signal_data = {
+            "type": "golden_cross",
+            "price": current_price,
+            "time": df_calc.index[-1].strftime("%Y-%m-%d %H:%M:%S"),
+            "bar_index": current_idx,
+            "score": buy_signal["score"],
+            "reasons": buy_signal["reasons"],
+            "rsi": buy_signal["rsi_value"],
+            "adx": buy_signal["adx_value"],
+            "atr": stop_loss_info["atr"],
+            "stop_loss": stop_loss_info["stop_loss"],
+            "risk_reward_ratio": stop_loss_info.get("risk_reward_ratio", 0)
+        }
         
-        # MACD 黃金交叉確認（必要條件，+2 分）
-        if gc_confirm[current_idx]:
-            score += 2
-            reasons.append("MACD黃金交叉確認(+2)")
-        else:
-            logger.debug(f"{symbol}: MACD 未確認黃金交叉")
-            return None
-        
-        # RSI < 50（+1 分）
-        if current_rsi < 50:
-            score += 1
-            reasons.append(f"RSI偏弱({current_rsi:.1f})(+1)")
-        
-        # ADX > 15（+1 分）
-        if current_adx > 15:
-            score += 1
-            reasons.append(f"ADX有趨勢({current_adx:.1f})(+1)")
-        
-        # 買入條件：總分 >= 2（已滿足 MACD 必要條件）
-        if score >= 2:
-            # 計算 ATR 和停損
-            atr = AverageTrueRange(df_calc['High'], df_calc['Low'], df_calc['Close'], window=params["atr"]["period"])
-            atr_value = atr.average_true_range().iloc[-1]
-            stop_loss = current_price - (atr_value * 2)
-            
-            signal_data = {
-                "type": "golden_cross",
-                "price": current_price,
-                "time": df_calc.index[-1].strftime("%Y-%m-%d %H:%M:%S"),
-                "bar_index": current_idx,
-                "score": score,
-                "reasons": reasons,
-                "rsi": round(current_rsi, 2),
-                "adx": round(current_adx, 2),
-                "atr": round(atr_value, 2),
-                "stop_loss": round(stop_loss, 2),
-                "risk_reward_ratio": round((current_price * 1.05 - current_price) / (current_price - stop_loss), 2) if stop_loss < current_price else 0
-            }
-            
-            logger.info(f"{symbol}: 買入訊號 - 分數={score}, 原因={reasons}")
-            return signal_data
-        
-        logger.debug(f"{symbol}: 買入分數不足 ({score} < 2)")
-        return None
+        logger.info(f"{symbol}: 買入訊號 - 分數={buy_signal['score']}/4, 原因={buy_signal['reasons']}")
+        return signal_data
     
     def check_sell_signal(self, df, symbol, position):
-        """檢查賣出訊號"""
+        """檢查賣出訊號 - 使用與回測相同的決策方法"""
         holding = position.get("holding_info", {})
         entry_price = holding.get("entry_price", 0)
         stop_loss = holding.get("stop_loss", 0)
         
-        df_indicators = self.indicators.calculate(df)
-        current = df_indicators.iloc[-1]
+        # 計算指標
+        df_calc = self.indicators.calculate(df)
+        current = df_calc.iloc[-1]
         
         # ATR 硬停損
         if stop_loss and current['Close'] <= stop_loss:
@@ -213,18 +142,28 @@ class StockTradingBot:
                 "pnl_pct": (current['Close'] - entry_price) / entry_price * 100 if entry_price > 0 else 0
             }
         
-        # MACD 死亡交叉
-        dc_result = self.indicators.detect_death_cross(df_indicators)
+        # 使用 should_sell 判斷
+        sell_signal = self.indicators.should_sell(df_calc)
+        
+        if not sell_signal["should_sell"]:
+            return None
         
         # 檢查是否隔日
         signal_time = position.get("signal_data", {}).get("time", "")
         signal_date = signal_time.split()[0] if signal_time else ""
         current_date = datetime.now().strftime("%Y-%m-%d")
         
-        if dc_result.get("detected"):
-            if signal_date == current_date:
-                logger.info(f"{symbol}: 死亡交叉，但仍在買入當日，暫不賣出")
-                return None
+        # 如果是死亡交叉，且在買入當日，暫不賣出
+        if sell_signal["death_cross"] and signal_date == current_date:
+            logger.info(f"{symbol}: 死亡交叉，但仍在買入當日，暫不賣出")
+            return None
+        
+        return {
+            "type": "sell_signal",
+            "price": current['Close'],
+            "reason": sell_signal["reasons"],
+            "pnl_pct": (current['Close'] - entry_price) / entry_price * 100 if entry_price > 0 else 0
+        }
             
             return {
                 "type": "death_cross",
