@@ -278,7 +278,6 @@
         new Chart(document.getElementById('priceChart'), {
             type: 'line',
             data: {
-                labels: priceData.map((p, i) => i),  // 使用數字索引作為標籤
                 datasets: [
                     {
                         label: '股價',
@@ -344,8 +343,11 @@
                             callback: function(value) {
                                 const idx = Math.round(value);
                                 return priceData[idx]?.time || '';
-                            }
-                        }
+                            },
+                            autoSkip: true,
+                            maxRotation: 0
+                        },
+                        grid: { display: false }
                     }
                 }
             }
