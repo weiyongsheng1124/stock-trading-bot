@@ -619,16 +619,35 @@
                 stop_loss_multiplier: p.stop_loss_multiplier
             };
             
-            // 編碼參數為 URL
-            const paramsJson = encodeURIComponent(JSON.stringify(params));
+            // 關閉 Modal
+            closeApplyModal();
             
-            // 重新回測，使用新參數
-            const url = '/backtest/result?symbol=' + targetSymbol + 
-                       '&period=' + period + 
-                       '&interval=' + interval + 
-                       '&capital=' + capital +
-                       '&params_data=' + paramsJson;
-            window.location.href = url;
+            // 先儲存參數到資料庫
+            fetch('/api/symbol_params/' + targetSymbol, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ params: params })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    // 編碼參數為 URL
+                    const paramsJson = encodeURIComponent(JSON.stringify(params));
+                    
+                    // 重新回測，使用新參數
+                    const url = '/backtest/result?symbol=' + targetSymbol + 
+                               '&period=' + period + 
+                               '&interval=' + interval + 
+                               '&capital=' + capital +
+                               '&params_data=' + paramsJson;
+                    window.location.href = url;
+                } else {
+                    alert('❌ 儲存參數失敗');
+                }
+            })
+            .catch(err => {
+                alert('❌ 網路錯誤');
+            });
         }
     </script>
 
