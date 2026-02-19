@@ -30,6 +30,7 @@ class TradingBot:
         self.application.add_handler(CommandHandler("status", self.status))
         self.application.add_handler(CommandHandler("positions", self.positions))
         self.application.add_handler(CommandHandler("trades", self.trades))
+        self.application.add_handler(CommandHandler("ignore", self.ignore))
         self.application.add_handler(CommandHandler("help", self.help))
         self.application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.unknown))
     
@@ -242,6 +243,36 @@ class TradingBot:
         
         await update.message.reply_text(text)
     
+    async def ignore(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """忽略買入/賣出訊號開關"""
+        args = context.args
+        
+        if args and args[0].lower() in ["on", "yes", "true", "1"]:
+            # 開啟忽略
+            self.db.set_ignore_signals(True)
+            await update.message.reply_text(
+                "🔇 **忽略模式已開啟**\n\n"
+                "機器人將不會發送買入/賣出訊號通知。\n"
+                "使用 /ignore off 可恢復通知。"
+            )
+        elif args and args[0].lower() in ["off", "no", "false", "0"]:
+            # 關閉忽略
+            self.db.set_ignore_signals(False)
+            await update.message.reply_text(
+                "🔔 **忽略模式已關閉**\n\n"
+                "機器人將會正常發送買入/賣出訊號通知。"
+            )
+        else:
+            # 顯示目前狀態
+            is_ignoring = self.db.get_ignore_signals()
+            status = "🔇 **忽略模式：開啟**" if is_ignoring else "🔔 **忽略模式：關閉**"
+            await update.message.reply_text(
+                f"{status}\n\n"
+                "使用指令：\n"
+                "/ignore on - 忽略買入/賣出訊號\n"
+                "/ignore off - 恢復通知"
+            )
+    
     async def help(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         help_text = """
 🤖 股票交易機器人說明
@@ -252,6 +283,7 @@ class TradingBot:
 /status - 查看目前狀態
 /positions - 查看持倉
 /trades - 查看交易紀錄
+/ignore [on/off] - 忽略訊號開關
 /help - 說明
 
 📋 買賣流程：

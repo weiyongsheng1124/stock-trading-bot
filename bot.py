@@ -167,6 +167,11 @@ class StockTradingBot:
     
     def process_symbol(self, symbol):
         """處理單一股票"""
+        # 檢查是否忽略訊號
+        if self.db.get_ignore_signals():
+            logger.debug(f"{symbol}: 忽略模式開啟，跳過處理")
+            return
+        
         # 檢查冷卻
         cooldown_symbols = self.db.get_cooldown_symbols()
         for pos in cooldown_symbols:

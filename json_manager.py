@@ -318,6 +318,28 @@ class JsonManager:
         except:
             return None
     
+    # ============ 忽略訊號開關 ============
+    
+    def set_ignore_signals(self, ignore: bool):
+        """設定是否忽略買入/賣出訊號"""
+        try:
+            config = self._read_json(CONFIG_FILE)
+            config["ignore_signals"] = ignore
+            config["ignore_updated_at"] = datetime.now().isoformat()
+            self._write_json(CONFIG_FILE, config)
+            return True
+        except Exception as e:
+            logger.error(f"設定 ignore_signals 失敗: {e}")
+            return False
+    
+    def get_ignore_signals(self) -> bool:
+        """取得是否忽略買入/賣出訊號"""
+        try:
+            config = self._read_json(CONFIG_FILE)
+            return config.get("ignore_signals", False)
+        except:
+            return False
+    
     # ============ 個別股票策略配置 ============
     
     # 使用內存存儲參數（Railway filesystem 唯讀）
