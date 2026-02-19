@@ -260,30 +260,29 @@
             }
         });
 
-        // 股價走勢圖
-        const priceLine = priceData.map((p, i) => ({
-            x: i,
-            y: p.close
-        }));
+        // 股價走勢圖（買賣點標記）
+        // buySignals 和 sellSignals 的 index 是原始 dataframe 的索引
+        // priceData 也是從原始 dataframe 的索引 0 開始
+        // 所以直接使用 b.index 作為 x 座標
         
         const buyPoints = buySignals.map(b => ({
-            x: equityData.findIndex(d => d.time === b.time),
+            x: b.index,  // 直接使用後端的 index
             y: priceMap[b.time] || b.price
-        })).filter(p => p.x >= 0);
+        })).filter(p => p.x >= 0 && p.x < priceData.length);
         
         const sellPoints = sellSignals.map(s => ({
-            x: equityData.findIndex(d => d.time === s.time),
+            x: s.index,  // 直接使用後端的 index
             y: priceMap[s.time] || s.price
-        })).filter(p => p.x >= 0);
+        })).filter(p => p.x >= 0 && p.x < priceData.length);
 
         new Chart(document.getElementById('priceChart'), {
             type: 'line',
             data: {
-                labels: allLabels,
+                labels: priceData.map((p, i) => i),  // 使用數字索引作為標籤
                 datasets: [
                     {
                         label: '股價',
-                        data: priceData.map(p => p.close),
+                        data: priceData.map((p, i) => ({x: i, y: p.close})),
                         borderColor: '#374151',
                         backgroundColor: 'transparent',
                         borderWidth: 2,
@@ -293,7 +292,7 @@
                     },
                     {
                         label: '買入',
-                        data: buyPoints.map(p => ({x: p.x, y: p.y})),
+                        data: buyPoints,
                         borderColor: '#ef4444',
                         backgroundColor: '#ef4444',
                         pointStyle: 'triangle',
@@ -304,7 +303,7 @@
                     },
                     {
                         label: '賣出',
-                        data: sellPoints.map(p => ({x: p.x, y: p.y})),
+                        data: sellPoints,
                         borderColor: '#22c55e',
                         backgroundColor: '#22c55e',
                         pointStyle: 'triangle',
@@ -317,10 +316,37 @@
             },
             options: {
                 responsive: true,
-                plugins: { legend: { display: false } },
+                plugins: { 
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const idx = context.parsed.x;
+                                const time = priceData[idx]?.time || '';
+                                if (context.dataset.label === '買入') {
+                                    return '買入 $' + context.parsed.y.toFixed(2) + ' (' + time + ')';
+                                } else if (context.dataset.label === '賣出') {
+                                    return '賣出 $' + context.parsed.y.toFixed(2) + ' (' + time + ')';
+                                }
+                                return '$' + context.parsed.y.toFixed(2) + ' (' + time + ')';
+                            }
+                        }
+                    }
+                },
                 scales: { 
                     y: { position: 'right', title: { display: true, text: '股價' } },
-                    x: { ticks: { maxTicksLimit: 20 } }
+                    x: { 
+                        type: 'linear',
+                        min: 0,
+                        max: priceData.length - 1,
+                        ticks: { 
+                            maxTicksLimit: 20,
+                            callback: function(value) {
+                                const idx = Math.round(value);
+                                return priceData[idx]?.time || '';
+                            }
+                        }
+                    }
                 }
             }
         });
