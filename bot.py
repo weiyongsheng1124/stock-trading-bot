@@ -164,15 +164,6 @@ class StockTradingBot:
             "reason": sell_signal["reasons"],
             "pnl_pct": (current['Close'] - entry_price) / entry_price * 100 if entry_price > 0 else 0
         }
-            
-            return {
-                "type": "death_cross",
-                "price": current['Close'],
-                "reason": "MACD 死亡交叉",
-                "pnl_pct": (current['Close'] - entry_price) / entry_price * 100 if entry_price > 0 else 0
-            }
-        
-        return None
     
     def process_symbol(self, symbol):
         """處理單一股票"""
