@@ -79,6 +79,78 @@
             </div>
         </div>
 
+        <!-- 參數優化器 -->
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden mb-8">
+            <div class="bg-purple-600 text-white px-6 py-4 flex justify-between items-center">
+                <h2 class="text-lg font-bold">🎯 參數優化器</h2>
+                <span class="text-sm opacity-80">根據目標勝率推薦最佳參數</span>
+            </div>
+            <div class="p-6">
+                <div class="flex flex-wrap gap-4 items-end mb-4">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">目標勝率 (%)</label>
+                        <input type="number" id="targetWinRate" value="60" min="0" max="100" 
+                               class="w-32 px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                    <button onclick="optimizeParams()" 
+                            class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded shadow">
+                        🔍 尋找最佳參數
+                    </button>
+                </div>
+                
+                <!-- 優化結果 -->
+                <div id="optimizeResult" class="hidden">
+                    <div class="border-t pt-4">
+                        <h3 class="font-bold text-lg mb-4">✨ 推薦參數</h3>
+                        
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                            <div class="bg-gray-50 p-3 rounded">
+                                <div class="text-gray-500 text-xs">MACD Fast</div>
+                                <div id="rec-macd-fast" class="text-xl font-bold text-blue-600">-</div>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded">
+                                <div class="text-gray-500 text-xs">MACD Slow</div>
+                                <div id="rec-macd-slow" class="text-xl font-bold text-blue-600">-</div>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded">
+                                <div class="text-gray-500 text-xs">MACD Signal</div>
+                                <div id="rec-macd-signal" class="text-xl font-bold text-blue-600">-</div>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded">
+                                <div class="text-gray-500 text-xs">RSI 週期</div>
+                                <div id="rec-rsi-period" class="text-xl font-bold text-purple-600">-</div>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded">
+                                <div class="text-gray-500 text-xs">確認棒數</div>
+                                <div id="rec-confirm" class="text-xl font-bold text-green-600">-</div>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded">
+                                <div class="text-gray-500 text-xs">停損倍數</div>
+                                <div id="rec-stop" class="text-xl font-bold text-red-600">-</div>
+                            </div>
+                            <div class="bg-green-50 p-3 rounded">
+                                <div class="text-green-600 text-xs">預估勝率</div>
+                                <div id="rec-winrate" class="text-xl font-bold text-green-600">-</div>
+                            </div>
+                            <div class="bg-green-50 p-3 rounded">
+                                <div class="text-green-600 text-xs">預估報酬</div>
+                                <div id="rec-return" class="text-xl font-bold text-green-600">-</div>
+                            </div>
+                        </div>
+                        
+                        <button onclick="showApplyModal()" 
+                                class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded shadow">
+                            ✅ 套用這些參數
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="optimizeLoading" class="hidden text-center py-4">
+                    <span class="text-purple-600 font-bold">🔄 搜尋最佳參數中...</span>
+                </div>
+            </div>
+        </div>
+
         <!-- 圖表區域 -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             <div class="bg-white rounded-lg shadow-lg p-6">
@@ -454,6 +526,127 @@
             });
         }
         {% endif %}
+
+        // ============ 參數優化器 ============
+        function optimizeParams() {
+            const targetWinRate = document.getElementById('targetWinRate').value;
+            const btn = document.querySelector('button[onclick="optimizeParams()"]');
+            const originalText = btn.innerText;
+            btn.disabled = true;
+            btn.innerText = '🔄 搜尋中...';
+            
+            document.getElementById('optimizeResult').classList.add('hidden');
+            document.getElementById('optimizeLoading').classList.remove('hidden');
+            
+            fetch('/api/optimize', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    symbol: symbol,
+                    target_win_rate: parseFloat(targetWinRate),
+                    period: period,
+                    interval: interval,
+                    initial_capital: capital
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('伺服器錯誤: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                btn.disabled = false;
+                btn.innerText = originalText;
+                document.getElementById('optimizeLoading').classList.add('hidden');
+                
+                if (data.success && data.recommended_params) {
+                    const params = data.recommended_params;
+                    const result = data.result;
+                    
+                    document.getElementById('rec-macd-fast').innerText = params.macd.fast;
+                    document.getElementById('rec-macd-slow').innerText = params.macd.slow;
+                    document.getElementById('rec-macd-signal').innerText = params.macd.signal;
+                    document.getElementById('rec-rsi-period').innerText = params.rsi.period;
+                    document.getElementById('rec-confirm').innerText = params.confirm_bars;
+                    document.getElementById('rec-stop').innerText = params.stop_loss_multiplier;
+                    document.getElementById('rec-winrate').innerText = (result.win_rate || 0) + '%';
+                    document.getElementById('rec-return').innerText = (result.total_return || 0) + '%';
+                    
+                    // 儲存推薦參數
+                    window.recommendedParams = params;
+                    
+                    document.getElementById('optimizeResult').classList.remove('hidden');
+                } else {
+                    const errorMsg = data.error || '找不到符合條件的參數組合';
+                    alert('❌ ' + errorMsg);
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerText = originalText;
+                document.getElementById('optimizeLoading').classList.add('hidden');
+                alert('❌ 網路錯誤：' + err.message + '\n請稍後再試');
+            });
+        }
+
+        function showApplyModal() {
+            if (!window.recommendedParams) {
+                alert('請先執行參數優化');
+                return;
+            }
+            document.getElementById('applyModal').classList.remove('hidden');
+        }
+
+        function closeApplyModal() {
+            document.getElementById('applyModal').classList.add('hidden');
+        }
+
+        function applyToSymbol() {
+            const targetSymbol = document.getElementById('targetSymbol').value;
+            if (!targetSymbol) {
+                alert('請選擇股票');
+                return;
+            }
+            
+            const p = window.recommendedParams;
+            const params = {
+                macd: { fast: p.macd.fast, slow: p.macd.slow, signal: p.macd.signal },
+                rsi: { period: p.rsi.period, oversold: 30, overbought: 70 },
+                adx: { period: p.adx.period, threshold: p.adx.threshold },
+                atr: { period: 14 },
+                confirm_bars: p.confirm_bars,
+                stop_loss_multiplier: p.stop_loss_multiplier
+            };
+            
+            // 編碼參數為 URL
+            const paramsJson = encodeURIComponent(JSON.stringify(params));
+            
+            // 重新回測，使用新參數
+            const url = '/backtest/result?symbol=' + targetSymbol + 
+                       '&period=' + period + 
+                       '&interval=' + interval + 
+                       '&capital=' + capital +
+                       '&params_data=' + paramsJson;
+            window.location.href = url;
+        }
     </script>
+
+    <!-- 選擇股票 Modal -->
+    <div id="applyModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 w-96 max-w-full mx-4">
+            <h3 class="text-xl font-bold mb-4">選擇要套用參數的股票</h3>
+            <select id="targetSymbol" class="w-full px-4 py-2 border rounded mb-4">
+                <option value="">-- 請選擇股票 --</option>
+                {% for s in symbols %}
+                <option value="{{ s }}" {% if s == symbol %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+            </select>
+            <div class="flex justify-end gap-2">
+                <button onclick="closeApplyModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800">取消</button>
+                <button onclick="applyToSymbol()" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">套用</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
