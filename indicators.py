@@ -252,3 +252,96 @@ class TechnicalIndicators:
             return True
         
         return False
+    
+    def should_buy(self, df):
+        """
+        綜合判斷是否應該買入
+        買入條件：
+        1. MACD 黃金交叉已確認（必要條件）
+        2. RSI < 50（不能太超買）
+        3. ADX > 15（有趨勢）
+        """
+        current = df.iloc[-1]
+        
+        # 檢查 MACD 黃金交叉
+        gc = self.detect_golden_cross(df)
+        
+        # RSI 狀態
+        rsi_oversold = current['RSI'] < 50  # 偏弱或超賣
+        
+        # ADX 狀態
+        adx_trend = current['ADX'] > 15  # 有趨勢
+        
+        # 綜合判斷
+        buy_score = 0
+        reasons = []
+        
+        if gc["detected"] and gc["confirmed"]:
+            buy_score += 2
+            reasons.append("MACD黃金交叉已確認")
+        elif gc["detected"] and not gc["confirmed"]:
+            buy_score += 1
+            reasons.append("MACD黃金交叉未確認")
+        
+        if rsi_oversold:
+            buy_score += 1
+            reasons.append("RSI偏弱(<50)")
+        
+        if adx_trend:
+            buy_score += 1
+            reasons.append("ADX有趨勢(>15)")
+        
+        # 買入條件：至少 3 分
+        should_buy = buy_score >= 3
+        
+        return {
+            "should_buy": should_buy,
+            "score": buy_score,
+            "max_score": 4,
+            "reasons": reasons,
+            "macd_confirmed": gc["confirmed"],
+            "rsi_oversold": rsi_oversold,
+            "adx_trend": adx_trend,
+            "rsi_value": round(current['RSI'], 2),
+            "adx_value": round(current['ADX'], 2)
+        }
+    
+    def should_sell(self, df):
+        """
+        綜合判斷是否應該賣出
+        賣出條件（滿足其一）：
+        1. MACD 死亡交叉
+        2. RSI > 70（超買）
+        3. ADX < 15（無趨勢）
+        """
+        current = df.iloc[-1]
+        
+        # 檢查 MACD 死亡交叉
+        dc = self.detect_death_cross(df)
+        
+        # RSI 狀態
+        rsi_overbought = current['RSI'] > 70
+        
+        # ADX 狀態
+        no_trend = current['ADX'] < 15
+        
+        # 賣出條件
+        should_sell = dc["detected"] or rsi_overbought or no_trend
+        
+        reasons = []
+        if dc["detected"]:
+            reasons.append("MACD死亡交叉")
+        if rsi_overbought:
+            reasons.append("RSI超買(>70)")
+        if no_trend:
+            reasons.append("ADX無趨勢(<15)")
+        
+        return {
+            "should_sell": should_sell,
+            "reasons": reasons,
+            "death_cross": dc["detected"],
+            "rsi_overbought": rsi_overbought,
+            "no_trend": no_trend,
+            "rsi_value": round(current['RSI'], 2),
+            "adx_value": round(current['ADX'], 2)
+        }
