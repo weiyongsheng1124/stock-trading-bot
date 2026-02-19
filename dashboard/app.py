@@ -536,9 +536,10 @@ def run_backtest_with_params(df, params, initial_capital=100000):
         # 複製資料避免修改原始資料
         df = df.copy()
         
-        # 記錄股價資料（用於圖表）
+        # 記錄股價資料（用於圖表）- 從 start_idx 開始，與 equityCurve 對齊
         price_data = []
-        for i in range(len(df)):
+        start_idx = 30
+        for i in range(start_idx, len(df)):
             price_data.append({
                 "time": str(df.index[i].date()),
                 "open": float(round(float(df['Open'].iloc[i]), 2)),
@@ -604,9 +605,6 @@ def run_backtest_with_params(df, params, initial_capital=100000):
         
         # 固定倉位比例（50%）
         position_size = 1.0
-        
-        # 從有足夠歷史資料的地方開始
-        start_idx = 30  # 避開前面需要計算指標的資料
         
         # 從有足夠歷史資料的地方開始
         start_idx = 30  # 避開前面需要計算指標的資料
