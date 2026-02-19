@@ -79,94 +79,22 @@
             </div>
         </div>
 
-        <!-- 參數優化器 -->
-        <div class="bg-white rounded-lg shadow-lg overflow-hidden mb-8">
-            <div class="bg-purple-600 text-white px-6 py-4 flex justify-between items-center">
-                <h2 class="text-lg font-bold">🎯 參數優化器</h2>
-                <span class="text-sm opacity-80">根據目標勝率推薦最佳參數</span>
-            </div>
-            <div class="p-6">
-                <div class="flex flex-wrap gap-4 items-end mb-4">
-                    <div>
-                        <label class="block text-gray-700 text-sm font-bold mb-2">目標勝率 (%)</label>
-                        <input type="number" id="targetWinRate" value="60" min="0" max="100" 
-                               class="w-32 px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500">
-                    </div>
-                    <button onclick="optimizeParams()" 
-                            class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded shadow">
-                        🔍 尋找最佳參數
-                    </button>
-                </div>
-                
-                <!-- 優化結果 -->
-                <div id="optimizeResult" class="hidden">
-                    <div class="border-t pt-4">
-                        <h3 class="font-bold text-lg mb-4">✨ 推薦參數</h3>
-                        
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                            <div class="bg-gray-50 p-3 rounded">
-                                <div class="text-gray-500 text-xs">MACD Fast</div>
-                                <div id="rec-macd-fast" class="text-xl font-bold text-blue-600">-</div>
-                            </div>
-                            <div class="bg-gray-50 p-3 rounded">
-                                <div class="text-gray-500 text-xs">MACD Slow</div>
-                                <div id="rec-macd-slow" class="text-xl font-bold text-blue-600">-</div>
-                            </div>
-                            <div class="bg-gray-50 p-3 rounded">
-                                <div class="text-gray-500 text-xs">MACD Signal</div>
-                                <div id="rec-macd-signal" class="text-xl font-bold text-blue-600">-</div>
-                            </div>
-                            <div class="bg-gray-50 p-3 rounded">
-                                <div class="text-gray-500 text-xs">RSI 週期</div>
-                                <div id="rec-rsi-period" class="text-xl font-bold text-purple-600">-</div>
-                            </div>
-                            <div class="bg-gray-50 p-3 rounded">
-                                <div class="text-gray-500 text-xs">確認棒數</div>
-                                <div id="rec-confirm" class="text-xl font-bold text-green-600">-</div>
-                            </div>
-                            <div class="bg-gray-50 p-3 rounded">
-                                <div class="text-gray-500 text-xs">停損倍數</div>
-                                <div id="rec-stop" class="text-xl font-bold text-red-600">-</div>
-                            </div>
-                            <div class="bg-green-50 p-3 rounded">
-                                <div class="text-green-600 text-xs">預估勝率</div>
-                                <div id="rec-winrate" class="text-xl font-bold text-green-600">-</div>
-                            </div>
-                            <div class="bg-green-50 p-3 rounded">
-                                <div class="text-green-600 text-xs">預估報酬</div>
-                                <div id="rec-return" class="text-xl font-bold text-green-600">-</div>
-                            </div>
-                        </div>
-                        
-                        <button onclick="showApplyModal()" 
-                                class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded shadow">
-                            ✅ 套用這些參數
-                        </button>
-                    </div>
-                </div>
-                
-                <div id="optimizeLoading" class="hidden text-center py-4">
-                    <span class="text-purple-600 font-bold">🔄 搜尋最佳參數中...</span>
-                </div>
-            </div>
-        </div>
-
         <!-- 圖表區域 -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             <div class="bg-white rounded-lg shadow-lg p-6">
                 <h3 class="font-bold text-lg mb-4">💰 資金曲線</h3>
-                <canvas id="equityChart" height="75"></canvas>
+                <canvas id="equityChart"></canvas>
             </div>
             <div class="bg-white rounded-lg shadow-lg p-6">
                 <h3 class="font-bold text-lg mb-4">📉 回撤曲線</h3>
-                <canvas id="drawdownChart" height="75"></canvas>
+                <canvas id="drawdownChart"></canvas>
             </div>
         </div>
 
-        <!-- 股價走勢圖（買賣點標記） -->
+        <!-- 股價走勢圖 -->
         <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
             <h3 class="font-bold text-lg mb-4">📈 股價走勢與買賣點</h3>
-            <canvas id="priceChart" height="75"></canvas>
+            <canvas id="priceChart"></canvas>
             <div class="mt-4 flex gap-4 text-sm">
                 <div class="flex items-center gap-2">
                     <span class="w-4 h-4 bg-red-500 rounded-full"></span>
@@ -182,19 +110,19 @@
         <!-- MACD 圖表 -->
         <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
             <h3 class="font-bold text-lg mb-4">📊 MACD</h3>
-            <canvas id="macdChart" height="75"></canvas>
+            <canvas id="macdChart"></canvas>
         </div>
 
         <!-- RSI 圖表 -->
         <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
             <h3 class="font-bold text-lg mb-4">📊 RSI</h3>
-            <canvas id="rsiChart" height="75"></canvas>
+            <canvas id="rsiChart"></canvas>
         </div>
 
         <!-- ADX 圖表 -->
         <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
             <h3 class="font-bold text-lg mb-4">📊 ADX</h3>
-            <canvas id="adxChart" height="75"></canvas>
+            <canvas id="adxChart"></canvas>
         </div>
 
         <!-- 策略參數 -->
@@ -259,178 +187,38 @@
         </div>
     </div>
 
-    <!-- 選擇股票 Modal -->
-    <div id="applyModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg p-6 w-96 max-w-full mx-4">
-            <h3 class="text-xl font-bold mb-4">選擇要套用參數的股票</h3>
-            <select id="targetSymbol" class="w-full px-4 py-2 border rounded mb-4">
-                <option value="">-- 請選擇股票 --</option>
-                {% for s in symbols %}
-                <option value="{{ s }}" {% if s == symbol %}selected{% endif %}>{{ s }}</option>
-                {% endfor %}
-            </select>
-            <div class="flex justify-end gap-2">
-                <button onclick="closeApplyModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800">取消</button>
-                <button onclick="applyToSymbol()" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">套用</button>
-            </div>
-        </div>
-    </div>
-
     <script>
         const symbol = '{{ symbol }}';
         const period = '{{ period }}';
         const interval = '{{ interval }}';
         const capital = {{ capital }};
 
-        function showApplyModal() {
-            if (!window.recommendedParams) {
-                alert('請先執行參數優化');
-                return;
-            }
-            document.getElementById('applyModal').classList.remove('hidden');
-        }
-
-        function closeApplyModal() {
-            document.getElementById('applyModal').classList.add('hidden');
-        }
-
-        function applyToSymbol() {
-            const targetSymbol = document.getElementById('targetSymbol').value;
-            if (!targetSymbol) {
-                alert('請選擇股票');
-                return;
-            }
-            
-            const p = window.recommendedParams;
-            const params = {
-                macd: { fast: p.macd.fast, slow: p.macd.slow, signal: p.macd.signal },
-                rsi: { period: p.rsi.period, oversold: p.rsi.oversold, overbought: p.rsi.overbought },
-                adx: { period: p.adx.period, threshold: p.adx.threshold },
-                atr: { period: p.atr.period },
-                confirm_bars: p.confirm_bars,
-                stop_loss_multiplier: p.stop_loss_multiplier,
-                new_high_period: p.new_high_period
-            };
-            
-            // 顯示載入中
-            const btn = document.querySelector('#applyModal button.bg-green-600');
-            const originalText = btn.innerText;
-            btn.disabled = true;
-            btn.innerText = '🔄 套用中...';
-            
-            fetch('/api/symbol_params/' + targetSymbol, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ params: params })
-            })
-            .then(r => r.json())
-            .then(data => {
-                btn.disabled = false;
-                btn.innerText = originalText;
-                
-                if (data.success) {
-                    closeApplyModal();
-                    
-                    // 編碼參數為 URL
-                    const paramsJson = encodeURIComponent(JSON.stringify(params));
-                    
-                    // 重新回測，使用新參數
-                    const url = '/backtest/result?symbol=' + targetSymbol + 
-                               '&period=' + period + 
-                               '&interval=' + interval + 
-                               '&capital=' + capital +
-                               '&params_data=' + paramsJson;
-                    window.location.href = url;
-                } else {
-                    alert('❌ 套用失敗');
-                }
-            })
-            .catch(err => {
-                btn.disabled = false;
-                btn.innerText = originalText;
-                alert('❌ 網路錯誤');
-            });
-        }
-
-        // ============ 參數優化器 ============
-        function optimizeParams() {
-            const targetWinRate = document.getElementById('targetWinRate').value;
-            const btn = document.querySelector('button[onclick="optimizeParams()"]');
-            const originalText = btn.innerText;
-            btn.disabled = true;
-            btn.innerText = '🔄 搜尋中...';
-            
-            document.getElementById('optimizeResult').classList.add('hidden');
-            document.getElementById('optimizeLoading').classList.remove('hidden');
-            
-            fetch('/api/optimize', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    symbol: symbol,
-                    target_win_rate: parseFloat(targetWinRate),
-                    period: period,
-                    interval: interval,
-                    initial_capital: capital
-                })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('伺服器錯誤: ' + response.status);
-                }
-                return response.json();
-            })
-            .then(data => {
-                btn.disabled = false;
-                btn.innerText = originalText;
-                document.getElementById('optimizeLoading').classList.add('hidden');
-                
-                if (data.success && data.recommended_params) {
-                    const params = data.recommended_params;
-                    const result = data.result;
-                    
-                    document.getElementById('rec-macd-fast').innerText = params.macd.fast;
-                    document.getElementById('rec-macd-slow').innerText = params.macd.slow;
-                    document.getElementById('rec-macd-signal').innerText = params.macd.signal;
-                    document.getElementById('rec-rsi-period').innerText = params.rsi.period;
-                    document.getElementById('rec-confirm').innerText = params.confirm_bars;
-                    document.getElementById('rec-stop').innerText = params.stop_loss_multiplier;
-                    document.getElementById('rec-winrate').innerText = (result.win_rate || 0) + '%';
-                    document.getElementById('rec-return').innerText = (result.total_return || 0) + '%';
-                    
-                    // 儲存推薦參數
-                    window.recommendedParams = params;
-                    
-                    document.getElementById('optimizeResult').classList.remove('hidden');
-                } else {
-                    const errorMsg = data.error || '找不到符合條件的參數組合';
-                    alert('❌ ' + errorMsg);
-                }
-            })
-            .catch(err => {
-                btn.disabled = false;
-                btn.innerText = originalText;
-                document.getElementById('optimizeLoading').classList.add('hidden');
-                alert('❌ 網路錯誤：' + err.message + '\n請稍後再試');
-            });
-        }
-
-
-        // ============ 圖表 ============
         {% if result and result.equity_curve %}
-        const equityData = {{ result.equity_curve | tojson }};
-        const drawdownData = {{ result.drawdown | default([]) | tojson }};
-        const buySignals = {{ result.buy_signals | default([]) | tojson }};
-        const sellSignals = {{ result.sell_signals | default([]) | tojson }};
+        // 數據
+        const equityData = {{ result.equity_curve | tojson | safe }};
+        const drawdownData = {{ result.drawdown | tojson | safe }};
+        const priceData = {{ result.price_data | tojson | safe }};
+        const macdData = {{ result.macd_data | tojson | safe }};
+        const rsiData = {{ result.rsi_data | tojson | safe }};
+        const adxData = {{ result.adx_data | tojson | safe }};
+        const buySignals = {{ result.buy_signals | tojson | safe }};
+        const sellSignals = {{ result.sell_signals | tojson | safe }};
+
+        // 統一日期標籤（使用 equityData 的時間）
+        const allLabels = equityData.map(d => d.time);
         
-        console.log('Equity data length:', equityData.length);
-        console.log('Drawdown data:', drawdownData);
+        // 建立時間到價格/信號的映射
+        const priceMap = {};
+        priceData.forEach(p => priceMap[p.time] = p.close);
         
-        // 資金曲線（使用百分比）
+        const buySet = new Set(buySignals.map(b => b.time));
+        const sellSet = new Set(sellSignals.map(s => s.time));
+
+        // 資金曲線
         new Chart(document.getElementById('equityChart'), {
             type: 'line',
             data: {
-                labels: equityData.map(d => d.time),
+                labels: allLabels,
                 datasets: [{
                     label: '資金變化%',
                     data: equityData.map(d => d.equity_pct),
@@ -442,280 +230,198 @@
             },
             options: {
                 responsive: true,
-                plugins: { 
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return '變化: ' + context.parsed.y.toFixed(2) + '%';
-                            }
-                        }
-                    }
-                },
-                scales: { 
-                    y: { 
-                        position: 'right',
-                        title: { display: true, text: '變化 %' }
-                    }
-                }
+                plugins: { legend: { display: false } },
+                scales: { y: { position: 'right', title: { display: true, text: '變化 %' } } }
             }
         });
-        
+
         // 回撤曲線
         new Chart(document.getElementById('drawdownChart'), {
             type: 'line',
             data: {
-                labels: drawdownData.map(d => d.time),
+                labels: allLabels,
                 datasets: [{
                     label: '回撤',
                     data: drawdownData.map(d => d.drawdown),
                     borderColor: '#dc2626',
                     backgroundColor: 'rgba(220, 38, 38, 0.1)',
-                    fill: false,  // 不填充
-                    tension: 0.1,  // 平滑曲線
-                    pointRadius: 0,  // 不顯示點
-                    pointHoverRadius: 4
+                    fill: false,
+                    tension: 0.1,
+                    pointRadius: 0
                 }]
             },
             options: {
                 responsive: true,
-                plugins: { 
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return '回撤: ' + context.parsed.y.toFixed(2) + '%';
-                            }
-                        }
-                    }
-                },
+                plugins: { legend: { display: false } },
                 scales: { 
-                    y: { 
-                        position: 'right',
-                        title: { display: true, text: '回撤 %' },
-                        beginAtZero: true
-                    },
-                    x: {
-                        ticks: { maxTicksLimit: 20 }
-                    }
-                },
-                interaction: {
-                    mode: 'index',
-                    intersect: false
+                    y: { position: 'right', title: { display: true, text: '回撤 %' }, beginAtZero: true },
+                    x: { ticks: { maxTicksLimit: 20 } }
                 }
             }
         });
+
+        // 股價走勢圖
+        const priceLine = priceData.map((p, i) => ({
+            x: i,
+            y: p.close
+        }));
         
-        // 股價走勢圖（買賣點標記）
-        if ((buySignals && buySignals.length > 0) || (sellSignals && sellSignals.length > 0)) {
-            // 股價資料
-            const priceData = {{ result.price_data | tojson }};
-            const buySignalsData = buySignals || [];
-            const sellSignalsData = sellSignals || [];
-            
-            // 建立時間到股價的映射
-            const priceMap = {};
-            priceData.forEach((p, index) => {
-                priceMap[p.time] = p.close;
-            });
-            
-            // 股價線資料
-            const priceLine = priceData.map(p => ({
-                x: p.time,
-                y: p.close
-            }));
-            
-            // 買入點
-            const buyPoints = buySignalsData.map(b => ({
-                x: b.time,
-                y: priceMap[b.time] || b.price
-            }));
-            
-            // 賣出點
-            const sellPoints = sellSignalsData.map(s => ({
-                x: s.time,
-                y: priceMap[s.time] || s.price
-            }));
-            
-            new Chart(document.getElementById('priceChart'), {
-                type: 'scatter',
-                data: {
-                    datasets: [
-                        {
-                            label: '股價',
-                            data: priceLine,
-                            borderColor: '#374151',
-                            backgroundColor: 'transparent',
-                            showLine: true,
-                            borderWidth: 2,
-                            pointRadius: 0,
-                            tension: 0.1,
-                            order: 2
-                        },
-                        {
-                            label: '買入',
-                            data: buyPoints,
-                            backgroundColor: '#ef4444',
-                            borderColor: '#ef4444',
-                            pointStyle: 'triangle',
-                            pointRadius: 12,
-                            pointRotation: 0,
-                            order: 1
-                        },
-                        {
-                            label: '賣出',
-                            data: sellPoints,
-                            backgroundColor: '#22c55e',
-                            borderColor: '#22c55e',
-                            pointStyle: 'triangle',
-                            pointRadius: 12,
-                            pointRotation: 180,
-                            order: 1
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return context.dataset.label + ': $' + context.parsed.y.toFixed(2);
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            type: 'category',
-                            labels: priceData.map(p => p.time),
-                            grid: { display: false },
-                            ticks: { maxTicksLimit: 20 }
-                        },
-                        y: { 
-                            position: 'right',
-                            title: { display: true, text: '股價' }
-                        }
-                    }
-                }
-            });
-        }
+        const buyPoints = buySignals.map(b => ({
+            x: equityData.findIndex(d => d.time === b.time),
+            y: priceMap[b.time] || b.price
+        })).filter(p => p.x >= 0);
         
-        // MACD 圖表
-        {% if result and result.macd_data %}
-        const macdData = {{ result.macd_data | tojson }};
-        new Chart(document.getElementById('macdChart'), {
+        const sellPoints = sellSignals.map(s => ({
+            x: equityData.findIndex(d => d.time === s.time),
+            y: priceMap[s.time] || s.price
+        })).filter(p => p.x >= 0);
+
+        new Chart(document.getElementById('priceChart'), {
             type: 'line',
             data: {
-                labels: macdData.map(d => d.time),
+                labels: allLabels,
                 datasets: [
                     {
-                        label: 'MACD',
-                        data: macdData.map(d => d.macd),
-                        borderColor: '#3b82f6',
+                        label: '股價',
+                        data: priceData.map(p => p.close),
+                        borderColor: '#374151',
                         backgroundColor: 'transparent',
-                        borderWidth: 1.5,
+                        borderWidth: 2,
                         pointRadius: 0,
-                        tension: 0.1
+                        tension: 0.1,
+                        order: 2
                     },
                     {
-                        label: 'Signal',
-                        data: macdData.map(d => d.signal),
-                        borderColor: '#f59e0b',
-                        backgroundColor: 'transparent',
-                        borderWidth: 1.5,
-                        pointRadius: 0,
-                        tension: 0.1
+                        label: '買入',
+                        data: buyPoints.map(p => ({x: p.x, y: p.y})),
+                        borderColor: '#ef4444',
+                        backgroundColor: '#ef4444',
+                        pointStyle: 'triangle',
+                        pointRadius: 10,
+                        pointRotation: 0,
+                        showLine: false,
+                        order: 1
                     },
                     {
-                        label: 'Hist',
-                        data: macdData.map(d => d.hist),
-                        borderColor: '#6b7280',
-                        backgroundColor: macdData.map(d => d.hist >= 0 ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'),
-                        borderWidth: 0,
-                        pointRadius: 0,
-                        fill: true
+                        label: '賣出',
+                        data: sellPoints.map(p => ({x: p.x, y: p.y})),
+                        borderColor: '#22c55e',
+                        backgroundColor: '#22c55e',
+                        pointStyle: 'triangle',
+                        pointRadius: 10,
+                        pointRotation: 180,
+                        showLine: false,
+                        order: 1
                     }
                 ]
             },
             options: {
                 responsive: true,
-                plugins: {
-                    legend: { display: true, position: 'top' }
-                },
-                scales: {
-                    x: { ticks: { maxTicksLimit: 20 } },
-                    y: { title: { display: true, text: 'MACD' } }
+                plugins: { legend: { display: false } },
+                scales: { 
+                    y: { position: 'right', title: { display: true, text: '股價' } },
+                    x: { ticks: { maxTicksLimit: 20 } }
                 }
             }
         });
-        {% endif %}
-        
-        // RSI 圖表
-        {% if result and result.rsi_data %}
-        const rsiData = {{ result.rsi_data | tojson }};
-        new Chart(document.getElementById('rsiChart'), {
-            type: 'line',
-            data: {
-                labels: rsiData.map(d => d.time),
-                datasets: [{
-                    label: 'RSI',
-                    data: rsiData.map(d => d.rsi),
-                    borderColor: '#8b5cf6',
-                    backgroundColor: 'transparent',
-                    borderWidth: 1.5,
-                    pointRadius: 0,
-                    tension: 0.1
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { display: true, position: 'top' }
+
+        // MACD 圖表
+        if (macdData && macdData.length > 0) {
+            new Chart(document.getElementById('macdChart'), {
+                type: 'line',
+                data: {
+                    labels: allLabels,
+                    datasets: [
+                        {
+                            label: 'MACD',
+                            data: macdData.map(d => d.macd),
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'transparent',
+                            borderWidth: 1.5,
+                            pointRadius: 0,
+                            tension: 0.1
+                        },
+                        {
+                            label: 'Signal',
+                            data: macdData.map(d => d.signal),
+                            borderColor: '#f59e0b',
+                            backgroundColor: 'transparent',
+                            borderWidth: 1.5,
+                            pointRadius: 0,
+                            tension: 0.1
+                        },
+                        {
+                            label: 'Hist',
+                            data: macdData.map(d => d.hist),
+                            borderColor: 'transparent',
+                            backgroundColor: macdData.map(d => d.hist >= 0 ? 'rgba(34, 197, 94, 0.5)' : 'rgba(239, 68, 68, 0.5)'),
+                            borderWidth: 0,
+                            pointRadius: 0,
+                            fill: true
+                        }
+                    ]
                 },
-                scales: {
-                    x: { ticks: { maxTicksLimit: 20 } },
-                    y: { 
-                        min: 0, 
-                        max: 100,
-                        title: { display: true, text: 'RSI' }
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: true, position: 'top' } },
+                    scales: { y: { title: { display: true, text: 'MACD' } } }
+                }
+            });
+        }
+
+        // RSI 圖表
+        if (rsiData && rsiData.length > 0) {
+            new Chart(document.getElementById('rsiChart'), {
+                type: 'line',
+                data: {
+                    labels: allLabels,
+                    datasets: [{
+                        label: 'RSI',
+                        data: rsiData.map(d => d.rsi),
+                        borderColor: '#8b5cf6',
+                        backgroundColor: 'transparent',
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: true, position: 'top' } },
+                    scales: { 
+                        y: { min: 0, max: 100, title: { display: true, text: 'RSI' } },
+                        x: { ticks: { maxTicksLimit: 20 } }
                     }
                 }
-            }
-        });
-        {% endif %}
-        
+            });
+        }
+
         // ADX 圖表
-        {% if result and result.adx_data %}
-        const adxData = {{ result.adx_data | tojson }};
-        new Chart(document.getElementById('adxChart'), {
-            type: 'line',
-            data: {
-                labels: adxData.map(d => d.time),
-                datasets: [{
-                    label: 'ADX',
-                    data: adxData.map(d => d.adx),
-                    borderColor: '#10b981',
-                    backgroundColor: 'transparent',
-                    borderWidth: 1.5,
-                    pointRadius: 0,
-                    tension: 0.1
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { display: true, position: 'top' }
+        if (adxData && adxData.length > 0) {
+            new Chart(document.getElementById('adxChart'), {
+                type: 'line',
+                data: {
+                    labels: allLabels,
+                    datasets: [{
+                        label: 'ADX',
+                        data: adxData.map(d => d.adx),
+                        borderColor: '#10b981',
+                        backgroundColor: 'transparent',
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                        tension: 0.1
+                    }]
                 },
-                scales: {
-                    x: { ticks: { maxTicksLimit: 20 } },
-                    y: { title: { display: true, text: 'ADX' } }
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: true, position: 'top' } },
+                    scales: { 
+                        y: { title: { display: true, text: 'ADX' } },
+                        x: { ticks: { maxTicksLimit: 20 } }
+                    }
                 }
-            }
-        });
-        {% endif %}
-        
+            });
+        }
         {% endif %}
     </script>
 </body>
