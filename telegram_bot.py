@@ -307,7 +307,13 @@ class TradingBot:
         await self.application.bot.send_message(chat_id=self.chat_id, text=message)
     
     def run(self):
-        self.application.run_polling()
+        try:
+            self.application.run_polling()
+        except Exception as e:
+            if "Conflict" in str(e) or "terminated by other" in str(e):
+                logger.warning("⚠️ Telegram Bot 被另一個實例终止 (部署重啟中)")
+            else:
+                logger.error(f"Telegram Bot 錯誤: {e}")
     
     async def run_async(self):
         await self.application.initialize()

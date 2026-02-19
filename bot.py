@@ -306,7 +306,14 @@ class StockTradingBot:
         # 啟動 Telegram Bot (僅當 ENABLE_TELEGRAM_BOT=true)
         if self.bot and ENABLE_TELEGRAM_BOT:
             logger.info("啟動 Telegram Bot...")
-            self.bot.run()
+            try:
+                self.bot.run()
+            except Exception as e:
+                if "Conflict" in str(e) or "terminated by other" in str(e):
+                    logger.warning("⚠️ Telegram Bot 被另一個實例终止 (部署重啟中)，跳過 Telegram 功能")
+                    self.bot = None
+                else:
+                    logger.error(f"Telegram Bot 運行錯誤: {e}")
         else:
             logger.info("Telegram Bot 模式: polling 已禁用 (使用 Webhook 或單一實例)")
         
