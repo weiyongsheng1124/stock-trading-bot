@@ -319,6 +319,9 @@
                     legend: { display: false },
                     tooltip: {
                         callbacks: {
+                            title: function(context) {
+                                return '';  // 隱藏標題
+                            },
                             label: function(context) {
                                 const idx = context.parsed.x;
                                 const time = priceData[idx]?.time || '';
