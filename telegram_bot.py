@@ -31,6 +31,7 @@ class TradingBot:
         self.application.add_handler(CommandHandler("positions", self.positions))
         self.application.add_handler(CommandHandler("trades", self.trades))
         self.application.add_handler(CommandHandler("scan", self.scan))
+        self.application.add_handler(CommandHandler("config", self.config))
         self.application.add_handler(CommandHandler("ignore", self.ignore))
         self.application.add_handler(CommandHandler("help", self.help))
         self.application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.unknown))
@@ -267,6 +268,45 @@ class TradingBot:
         except Exception as e:
             await update.message.reply_text(f"❌ 掃描失敗：{str(e)}")
     
+    async def config(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """查看股票參數"""
+        args = context.args
+        
+        if not args:
+            await update.message.reply_text(
+                "❌ 請輸入股票代碼\n\n"
+                "例如：/config 2330.TW"
+            )
+            return
+        
+        symbol = args[0].upper()
+        
+        # 取得個別股票參數
+        symbol_params = self.db.get_symbol_params(symbol)
+        
+        if symbol_params:
+            p = symbol_params
+            msg = f"⚙️ **{symbol} 參數設定**\n\n"
+            msg += f"📊 MACD: Fast={p.get('macd', {}).get('fast', '-')}, "
+            msg += f"Slow={p.get('macd', {}).get('slow', '-')}, "
+            msg += f"Signal={p.get('macd', {}).get('signal', '-')}\n"
+            msg += f"📉 RSI: 週期={p.get('rsi', {}).get('period', '-')}, "
+            msg += f"超賣={p.get('rsi', {}).get('oversold', '-')}, "
+            msg += f"超買={p.get('rsi', {}).get('overbought', '-')}\n"
+            msg += f"📈 ADX: 週期={p.get('adx', {}).get('period', '-')}, "
+            msg += f"閾值={p.get('adx', {}).get('threshold', '-')}\n"
+            msg += f"📏 ATR: 週期={p.get('atr', {}).get('period', '-')}\n"
+            msg += f"✅ 確認棒數: {p.get('confirm_bars', '-')}\n"
+            msg += f"🛡️ 停損倍數: {p.get('stop_loss_multiplier', '-')}"
+            
+            await update.message.reply_text(msg, parse_mode='Markdown')
+        else:
+            await update.message.reply_text(
+                f"⚠️ **{symbol}** 目前使用預設參數\n\n"
+                "請在 Dashboard 中設定參數：\n"
+                f"/config/{symbol}"
+            )
+    
     async def ignore(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """忽略買入/賣出訊號開關"""
         args = context.args
@@ -305,6 +345,7 @@ class TradingBot:
 /buy [股票代碼] - 確認買入（例：/buy 2330.TW）
 /sell [股票代碼] - 確認賣出（例：/sell 2330.TW）
 /scan - 手動掃描監控股票
+/config [股票代碼] - 查看參數（例：/config 2330.TW）
 /status - 查看目前狀態
 /positions - 查看持倉
 /trades - 查看交易紀錄
