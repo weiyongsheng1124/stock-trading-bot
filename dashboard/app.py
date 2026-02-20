@@ -284,8 +284,7 @@ def config_symbol_save(symbol):
 def api_symbol_params(symbol):
     """取得個別股票參數 API"""
     params = db.get_symbol_params(symbol)
-    if params is None:
-        params = STRATEGY_PARAMS
+    # 只返回自訂參數，None 表示使用預設
     return jsonify({"symbol": symbol.upper(), "params": params})
 
 
