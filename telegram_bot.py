@@ -38,8 +38,8 @@ class TradingBot:
         await update.message.reply_text(
             "🤖 股票交易機器人已啟動！\n\n"
             "可用指令：\n"
-            "/buy - 確認買入\n"
-            "/sell - 確認賣出\n"
+            "/buy [股票代碼] - 確認買入（例：/buy 2330.TW）\n"
+            "/sell [股票代碼] - 確認賣出（例：/sell 2330.TW）\n"
             "/status - 查看狀態\n"
             "/positions - 查看持倉\n"
             "/trades - 查看交易紀錄\n"
@@ -49,32 +49,28 @@ class TradingBot:
     async def buy(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         args = context.args
         
-        # 取得股票代碼
-        if args:
-            symbol = args[0].upper()
-        else:
-            positions = self.db.get_all_positions(status=TradingState.SIGNAL_BUY_SENT)
-            if len(positions) == 0:
-                await update.message.reply_text("❌ 目前沒有待確認的買入訊號")
-                return
-            elif len(positions) == 1:
-                symbol = positions[0]["symbol"]
-            else:
-                symbols = [p["symbol"] for p in positions]
-                await update.message.reply_text(
-                    f"📋 待確認買入的股票：\n" + "\n".join([f"- {s}" for s in symbols]) +
-                    "\n\n請輸入：/buy <股票代碼>"
-                )
-                return
+        # 強制要求輸入股票代碼
+        if not args:
+            await update.message.reply_text(
+                "❌ 請輸入股票代碼\n\n"
+                "例如：/buy 2330.TW"
+            )
+            return
+        
+        symbol = args[0].upper()
         
         position = self.db.get_position(symbol)
         
         if not position:
-            await update.message.reply_text(f"❌ 沒有 {symbol} 的買入訊號")
+            await update.message.reply_text(f"❌ 沒有 {symbol} 的買入訊號\n\n請確認股票是否在監控清單中")
             return
         
         if position["status"] == TradingState.HOLDING:
             await update.message.reply_text(f"⚠️ {symbol} 已經在持倉中")
+            return
+        
+        if position["status"] != TradingState.SIGNAL_BUY_SENT:
+            await update.message.reply_text(f"⚠️ {symbol} 目前沒有買入訊號")
             return
         
         signal_data = position.get("signal_data", {})
@@ -111,27 +107,20 @@ class TradingBot:
     async def sell(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         args = context.args
         
-        if args:
-            symbol = args[0].upper()
-        else:
-            positions = self.db.get_all_positions(status=TradingState.HOLDING)
-            if len(positions) == 0:
-                await update.message.reply_text("❌ 目前沒有持倉中的股票")
-                return
-            elif len(positions) == 1:
-                symbol = positions[0]["symbol"]
-            else:
-                symbols = [p["symbol"] for p in positions]
-                await update.message.reply_text(
-                    f"📋 持倉中的股票：\n" + "\n".join([f"- {s}" for s in symbols]) +
-                    "\n\n請輸入：/sell <股票代碼>"
-                )
-                return
+        # 強制要求輸入股票代碼
+        if not args:
+            await update.message.reply_text(
+                "❌ 請輸入股票代碼\n\n"
+                "例如：/sell 2330.TW"
+            )
+            return
+        
+        symbol = args[0].upper()
         
         position = self.db.get_position(symbol)
         
         if not position:
-            await update.message.reply_text(f"❌ 沒有 {symbol} 的持倉記錄")
+            await update.message.reply_text(f"❌ 沒有 {symbol} 的持倉記錄\n\n請確認股票是否在持倉中")
             return
         
         if position["status"] not in [TradingState.HOLDING, TradingState.SIGNAL_SELL_SENT]:
@@ -143,7 +132,13 @@ class TradingBot:
         entry_time = holding.get("entry_time")
         quantity = holding.get("quantity", 0)
         
-        current_price = float(args[1]) if len(args) > 1 else float(args[0]) if args else entry_price
+        # 取得目前股價
+        try:
+            import yfinance as yf
+            stock = yf.Ticker(symbol)
+            current_price = stock.history(period="1d")['Close'].iloc[-1]
+        except:
+            current_price = entry_price  # 如果取得失敗，使用買入價
         
         pnl_pct = (current_price - entry_price) / entry_price * 100 if entry_price and entry_price > 0 else 0
         pnl_symbol = "+" if pnl_pct >= 0 else ""
@@ -278,8 +273,8 @@ class TradingBot:
 🤖 股票交易機器人說明
 
 📌 指令列表：
-/buy [股票代碼] - 確認買入
-/sell [股票代碼] - 確認賣出
+/buy [股票代碼] - 確認買入（例：/buy 2330.TW）
+/sell [股票代碼] - 確認賣出（例：/sell 2330.TW）
 /status - 查看目前狀態
 /positions - 查看持倉
 /trades - 查看交易紀錄
@@ -288,10 +283,12 @@ class TradingBot:
 
 📋 買賣流程：
 1. 機器人偵測到買入訊號 → 發送通知
-2. 您回覆 /buy → 機器人記錄買入資訊
+2. 您輸入 /buy <股票代碼> → 機器人記錄買入資訊
 3. 機器人持續監控
 4. 機器人偵測到賣出訊號 → 發送通知
-5. 您回覆 /sell → 機器人計算損益並結清
+5. 您輸入 /sell <股票代碼> → 機器人計算損益並結清
+
+⚠️ 注意：監控多檔股票時，買入/賣出必須指定股票代碼
         """
         await update.message.reply_text(help_text)
     
