@@ -281,6 +281,16 @@ class TradingBot:
         
         symbol = args[0].upper()
         
+        # 檢查股票是否在監控清單內
+        monitor_symbols = self.db.get_monitor_symbols()
+        if symbol not in monitor_symbols:
+            await update.message.reply_text(
+                f"❌ **{symbol}** 不在監控清單中\n\n"
+                f"監控清單中的股票：\n" + 
+                "\n".join([f"• {s}" for s in monitor_symbols])
+            )
+            return
+        
         # 取得個別股票參數
         symbol_params = self.db.get_symbol_params(symbol)
         
@@ -302,8 +312,8 @@ class TradingBot:
             await update.message.reply_text(msg, parse_mode='Markdown')
         else:
             await update.message.reply_text(
-                f"⚠️ **{symbol}** 目前使用預設參數\n\n"
-                "請在 Dashboard 中設定參數：\n"
+                f"ℹ️ **{symbol}** 目前使用預設參數\n\n"
+                f"💡 若要自訂參數，請至 Dashboard 設定：\n"
                 f"/config/{symbol}"
             )
     
