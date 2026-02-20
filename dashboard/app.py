@@ -750,7 +750,7 @@ def run_backtest_with_params(df, params, initial_capital=100000):
             "rsi_data": rsi_data,
             "adx_data": adx_data,
             "max_drawdown": round(max_dd, 2),
-            "final_capital": round(cash, 2),
+            "final_capital": round(equity_curve[-1]["equity"], 2) if equity_curve else round(initial_capital_float, 2),
             "params": params
         }
         
