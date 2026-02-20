@@ -4,7 +4,11 @@ JSON 文件管理模組 - 取代 MongoDB
 import json
 import os
 import shutil
+import logging
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
+
 from config import (
     POSITIONS_FILE, TRADES_FILE, SIGNALS_FILE, 
     LOGS_FILE, CONFIG_FILE, DATA_DIR, TradingState,
