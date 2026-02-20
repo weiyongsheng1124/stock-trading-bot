@@ -383,15 +383,21 @@ class JsonManager:
                 )
                 if response.status_code == 200:
                     data = response.json()
-                    if data.get("params"):
+                    params = data.get("params")
+                    # 檢查是否有有效的參數（不是 None 或空字典）
+                    if params is not None and params != {}:
                         logger.info(f"從 Dashboard API 取得 {symbol} 參數")
-                        return data["params"]
+                        return params
+                    else:
+                        logger.debug(f"{symbol} 沒有自訂參數，使用預設")
             except Exception as api_error:
                 logger.debug(f"Dashboard API 不可用: {api_error}")
             
             # 回退到本地緩存
             if symbol in self._symbol_params_cache:
-                return self._symbol_params_cache[symbol].get("params")
+                cached = self._symbol_params_cache[symbol].get("params")
+                if cached is not None and cached != {}:
+                    return cached
             
             return None
         except Exception as e:
