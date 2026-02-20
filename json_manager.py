@@ -437,6 +437,23 @@ class JsonManager:
     def get_monitor_symbols(self):
         """取得監控股票清單"""
         try:
+            # 優先從 Dashboard API 獲取
+            from config import DASHBOARD_URL
+            try:
+                import requests
+                response = requests.get(
+                    f"{DASHBOARD_URL}/api/symbols",
+                    timeout=5
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    if data:
+                        logger.info("從 Dashboard API 取得監控股票清單")
+                        return data
+            except Exception as api_error:
+                logger.debug(f"Dashboard API 不可用: {api_error}")
+            
+            # 回退到本地讀取
             data = self._read_json(SYMBOLS_FILE)
             return data.get("symbols", ["2330.TW", "8110.TW", "2337.TW"])
         except:
