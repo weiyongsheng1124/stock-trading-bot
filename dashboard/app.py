@@ -308,6 +308,12 @@ def api_delete_symbol_params(symbol):
     db.delete_symbol_params(symbol.upper())
     return jsonify({"success": True})
 
+@app.route('/api/symbol_params', methods=['GET'])
+def api_all_symbol_params():
+    """取得所有股票參數 API"""
+    all_params = db.get_all_symbol_params()
+    return jsonify(all_params)
+
 
 # ============ 回測頁 ============
 

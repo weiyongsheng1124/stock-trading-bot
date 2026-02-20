@@ -21,6 +21,9 @@ os.makedirs(DATA_DIR, exist_ok=True)
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
+# ============ Dashboard API 配置 ============
+DASHBOARD_URL = os.getenv("DASHBOARD_URL", "https://stock-trading-bot-production.up.railway.app")
+
 # ============ 控制開關 ============
 ENABLE_TELEGRAM_BOT = os.getenv("ENABLE_TELEGRAM_BOT", "false").lower() == "true"
 

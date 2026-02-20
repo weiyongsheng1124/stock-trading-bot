@@ -368,8 +368,27 @@ class JsonManager:
         """取得個別股票的策略參數"""
         try:
             symbol = symbol.upper()
+            
+            # 優先從 Dashboard API 獲取
+            from config import DASHBOARD_URL
+            try:
+                import requests
+                response = requests.get(
+                    f"{DASHBOARD_URL}/api/symbol_params/{symbol}",
+                    timeout=5
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    if data.get("params"):
+                        logger.info(f"從 Dashboard API 取得 {symbol} 參數")
+                        return data["params"]
+            except Exception as api_error:
+                logger.debug(f"Dashboard API 不可用: {api_error}")
+            
+            # 回退到本地緩存
             if symbol in self._symbol_params_cache:
                 return self._symbol_params_cache[symbol].get("params")
+            
             return None
         except Exception as e:
             print(f"取得股票參數失敗: {e}")
@@ -378,6 +397,23 @@ class JsonManager:
     def get_all_symbol_params(self):
         """取得所有股票的個別參數"""
         try:
+            # 優先從 Dashboard API 獲取
+            from config import DASHBOARD_URL
+            try:
+                import requests
+                response = requests.get(
+                    f"{DASHBOARD_URL}/api/symbol_params",
+                    timeout=5
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    if data:
+                        logger.info("從 Dashboard API 取得所有股票參數")
+                        return data
+            except Exception as api_error:
+                logger.debug(f"Dashboard API 不可用: {api_error}")
+            
+            # 回退到本地緩存
             return self._symbol_params_cache.copy()
         except:
             return {}
