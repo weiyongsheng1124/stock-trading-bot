@@ -88,13 +88,18 @@ class StockTradingBot:
             logger.error(f"{symbol}: 取得資料失敗 - {e}")
             return None
     
-    def check_buy_signal(self, df, symbol):
+    def check_buy_signal(self, df, symbol, indicators=None, params=None):
         """檢查買入訊號 - 使用與回測相同的決策方法"""
+        if indicators is None:
+            indicators = self.indicators
+        if params is None:
+            params = STRATEGY_PARAMS
+        
         # 計算指標
-        df_calc = self.indicators.calculate(df)
+        df_calc = indicators.calculate(df)
         
         # 使用 should_buy 判斷
-        buy_signal = self.indicators.should_buy(df_calc)
+        buy_signal = indicators.should_buy(df_calc)
         
         if not buy_signal["should_buy"]:
             logger.debug(f"{symbol}: 買入分數不足 ({buy_signal['score']}/4)")
@@ -104,7 +109,11 @@ class StockTradingBot:
         current_price = df_calc['Close'].iloc[current_idx]
         
         # 計算停損
-        stop_loss_info = self.indicators.calculate_stop_loss(df_calc, current_price, current_idx)
+        stop_loss_info = indicators.calculate_stop_loss(df_calc, current_price, current_idx)
+        
+        # 取得 MACD 差值
+        macd_dif = df_calc['MACD_DIF'].iloc[current_idx] if 'MACD_DIF' in df_calc else df_calc['MACD'].iloc[current_idx]
+        macd_dea = df_calc['MACD_DEA'].iloc[current_idx] if 'MACD_DEA' in df_calc else df_calc['MACD_Signal'].iloc[current_idx]
         
         signal_data = {
             "type": "golden_cross",
@@ -117,20 +126,25 @@ class StockTradingBot:
             "adx": buy_signal["adx_value"],
             "atr": stop_loss_info["atr"],
             "stop_loss": stop_loss_info["stop_loss"],
-            "risk_reward_ratio": stop_loss_info.get("risk_reward_ratio", 0)
+            "risk_reward_ratio": stop_loss_info.get("risk_reward_ratio", 0),
+            "macd_dif": macd_dif,
+            "macd_dea": macd_dea
         }
         
         logger.info(f"{symbol}: 買入訊號 - 分數={buy_signal['score']}/4, 原因={buy_signal['reasons']}")
         return signal_data
     
-    def check_sell_signal(self, df, symbol, position):
+    def check_sell_signal(self, df, symbol, position, indicators=None):
         """檢查賣出訊號 - 使用與回測相同的決策方法"""
+        if indicators is None:
+            indicators = self.indicators
+        
         holding = position.get("holding_info", {})
         entry_price = holding.get("entry_price", 0)
         stop_loss = holding.get("stop_loss", 0)
         
         # 計算指標
-        df_calc = self.indicators.calculate(df)
+        df_calc = indicators.calculate(df)
         current = df_calc.iloc[-1]
         
         # ATR 硬停損
@@ -143,7 +157,7 @@ class StockTradingBot:
             }
         
         # 使用 should_sell 判斷
-        sell_signal = self.indicators.should_sell(df_calc)
+        sell_signal = indicators.should_sell(df_calc)
         
         if not sell_signal["should_sell"]:
             return None
@@ -184,12 +198,23 @@ class StockTradingBot:
         if df is None:
             return
         
+        # 取得個別股票參數（如果沒有設定則使用預設值）
+        symbol_params = self.db.get_symbol_params(symbol)
+        if symbol_params:
+            logger.info(f"{symbol}: 使用自訂參數")
+            params = symbol_params
+        else:
+            params = STRATEGY_PARAMS
+        
+        # 建立臨時的 TechnicalIndicators
+        temp_indicators = TechnicalIndicators(params)
+        
         # 取得持倉
         position = self.db.get_position(symbol)
         
         if position is None:
             # 檢查買入訊號
-            signal = self.check_buy_signal(df, symbol)
+            signal = self.check_buy_signal(df, symbol, temp_indicators, params)
             
             if signal:
                 self.db.log_signal(symbol, "buy", signal)
@@ -209,7 +234,7 @@ class StockTradingBot:
         
         elif position["status"] in [TradingState.SIGNAL_BUY_SENT, TradingState.HOLDING]:
             # 檢查賣出訊號
-            sell_signal = self.check_sell_signal(df, symbol, position)
+            sell_signal = self.check_sell_signal(df, symbol, position, temp_indicators)
             
             if sell_signal:
                 self.db.log_signal(symbol, "sell", sell_signal)
