@@ -30,6 +30,7 @@ class TradingBot:
         self.application.add_handler(CommandHandler("status", self.status))
         self.application.add_handler(CommandHandler("positions", self.positions))
         self.application.add_handler(CommandHandler("trades", self.trades))
+        self.application.add_handler(CommandHandler("scan", self.scan))
         self.application.add_handler(CommandHandler("ignore", self.ignore))
         self.application.add_handler(CommandHandler("help", self.help))
         self.application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.unknown))
@@ -40,6 +41,7 @@ class TradingBot:
             "可用指令：\n"
             "/buy [股票代碼] - 確認買入（例：/buy 2330.TW）\n"
             "/sell [股票代碼] - 確認賣出（例：/sell 2330.TW）\n"
+            "/scan - 手動掃描監控股票\n"
             "/status - 查看狀態\n"
             "/positions - 查看持倉\n"
             "/trades - 查看交易紀錄\n"
@@ -238,6 +240,33 @@ class TradingBot:
         
         await update.message.reply_text(text)
     
+    async def scan(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """手動掃描監控股票"""
+        await update.message.reply_text("🔍 開始掃描監控股票...")
+        
+        # 呼叫 bot 的掃描功能
+        try:
+            from bot import StockTradingBot
+            scan_bot = StockTradingBot()
+            scan_bot.run_market_scan()
+            
+            # 檢查是否有新的買入訊號
+            positions = self.db.get_all_positions(status=TradingState.SIGNAL_BUY_SENT)
+            
+            if positions:
+                msg = "📈 發現買入訊號：\n\n"
+                for pos in positions:
+                    signal = pos.get("signal_data", {})
+                    price = signal.get("price", 0)
+                    symbol = pos["symbol"]
+                    msg += f"• {symbol}: ${price}\n"
+                await update.message.reply_text(msg)
+            else:
+                await update.message.reply_text("✅ 目前沒有買入訊號")
+                
+        except Exception as e:
+            await update.message.reply_text(f"❌ 掃描失敗：{str(e)}")
+    
     async def ignore(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """忽略買入/賣出訊號開關"""
         args = context.args
@@ -275,6 +304,7 @@ class TradingBot:
 📌 指令列表：
 /buy [股票代碼] - 確認買入（例：/buy 2330.TW）
 /sell [股票代碼] - 確認賣出（例：/sell 2330.TW）
+/scan - 手動掃描監控股票
 /status - 查看目前狀態
 /positions - 查看持倉
 /trades - 查看交易紀錄
@@ -282,11 +312,12 @@ class TradingBot:
 /help - 說明
 
 📋 買賣流程：
-1. 機器人偵測到買入訊號 → 發送通知
-2. 您輸入 /buy <股票代碼> → 機器人記錄買入資訊
-3. 機器人持續監控
-4. 機器人偵測到賣出訊號 → 發送通知
-5. 您輸入 /sell <股票代碼> → 機器人計算損益並結清
+1. 輸入 /scan 手動掃描 或 等待自動掃描
+2. 機器人偵測到買入訊號 → 發送通知
+3. 您輸入 /buy <股票代碼> → 機器人記錄買入資訊
+4. 機器人持續監控
+5. 機器人偵測到賣出訊號 → 發送通知
+6. 您輸入 /sell <股票代碼> → 機器人計算損益並結清
 
 ⚠️ 注意：監控多檔股票時，買入/賣出必須指定股票代碼
         """
