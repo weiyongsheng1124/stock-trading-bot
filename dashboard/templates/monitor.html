@@ -378,12 +378,12 @@
                     
                     // MACD
                     new Chart(document.getElementById('macd-{{ symbol }}'), {
-                        type: 'line',
                         data: {
                             labels: times,
                             datasets: [
-                                { label: 'MACD', data: candles.map(c => c.macd), borderColor: '#2563eb', tension: 0.1 },
-                                { label: 'Signal', data: candles.map(c => c.macd_signal), borderColor: '#dc2626', tension: 0.1 }
+                                { type: 'line', label: 'MACD', data: candles.map(c => c.macd), borderColor: '#2563eb', tension: 0.1 },
+                                { type: 'line', label: 'Signal', data: candles.map(c => c.macd_signal), borderColor: '#dc2626', tension: 0.1 },
+                                { type: 'bar', label: 'Hist', data: candles.map(c => c.macd_hist), backgroundColor: candles.map(c => c.macd_hist >= 0 ? '#22c55e' : '#ef4444'), barThickness: 2 }
                             ]
                         },
                         options: {
