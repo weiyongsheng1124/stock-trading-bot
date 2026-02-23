@@ -270,9 +270,13 @@ class StockTradingBot:
                 df = self.get_stock_data(symbol, period="1d", interval="5m")
                 if df is not None and len(df) > 0:
                     current_price = df['Close'].iloc[-1]
-                    current_time = df.index[-1].strftime("%Y-%m-%d %H:%M:%S")
-                    self.db.log("INFO", f"{symbol} 股價: ${current_price:.2f} ({current_time})", "price_log")
-                    logger.info(f"{symbol}: 股價記錄 ${current_price:.2f} ({current_time})")
+                    dt = df.index[-1]
+                    date_str = dt.strftime("%Y-%m-%d")
+                    time_str = dt.strftime("%H:%M")
+                    # 記錄格式：股票代碼,日期,時間,價格
+                    log_msg = f"{symbol},{date_str},{time_str},{current_price:.2f}"
+                    self.db.log("INFO", log_msg, "price_log")
+                    logger.info(f"股價記錄: {symbol} {date_str} {time_str} ${current_price:.2f}")
             except Exception as e:
                 logger.error(f"{symbol}: 股價記錄失敗 - {e}")
     
