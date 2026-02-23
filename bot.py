@@ -257,6 +257,25 @@ class StockTradingBot:
                 
                 logger.info(f"{symbol}: 賣出訊號已發送 - {sell_signal['reason']}")
     
+    def log_stock_prices(self):
+        """記錄個股股價（開盤時間每5分鐘）"""
+        if not self.is_trading_hours():
+            return
+        
+        # 重新載入監控股票清單
+        self.symbols = self.db.get_monitor_symbols()
+        
+        for symbol in self.symbols:
+            try:
+                df = self.get_stock_data(symbol, period="1d", interval="5m")
+                if df is not None and len(df) > 0:
+                    current_price = df['Close'].iloc[-1]
+                    current_time = df.index[-1].strftime("%Y-%m-%d %H:%M:%S")
+                    self.db.log("INFO", f"{symbol} 股價: ${current_price:.2f} ({current_time})", "price_log")
+                    logger.info(f"{symbol}: 股價記錄 ${current_price:.2f} ({current_time})")
+            except Exception as e:
+                logger.error(f"{symbol}: 股價記錄失敗 - {e}")
+    
     def run_market_scan(self):
         """執行市場掃描"""
         if not self.is_trading_hours():
@@ -329,6 +348,7 @@ class StockTradingBot:
         # 排程
         schedule.every(self.check_interval).seconds.do(self.run_market_scan)
         schedule.every(1).minutes.do(self.run_hard_stop_loss_check)
+        schedule.every(self.check_interval).seconds.do(self.log_stock_prices)  # 記錄股價
         schedule.every().day.at("09:00").do(self.db.clear_expired_cooldowns)
         
         self.is_running = True
