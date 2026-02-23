@@ -11,6 +11,16 @@
         .status-holding { background-color: #fef08a; color: #854d0e; }
         .status-sell { background-color: #fee2e2; color: #991b1b; }
         .status-cooldown { background-color: #f3f4f6; color: #6b7280; }
+        .chart-container {
+            position: relative;
+            height: 200px;
+            width: 100%;
+        }
+        @media (max-width: 640px) {
+            .chart-container {
+                height: 150px;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -92,24 +102,32 @@
                 <!-- K線圖 -->
                 <div class="mb-6">
                     <h3 class="font-bold text-gray-700 mb-2">5分鐘K線</h3>
-                    <canvas id="chart-{{ symbol }}" height="50"></canvas>
+                    <div class="chart-container">
+                        <canvas id="chart-{{ symbol }}"></canvas>
+                    </div>
                 </div>
                 
                 <!-- MACD -->
                 <div class="mb-6">
                     <h3 class="font-bold text-gray-700 mb-2">MACD</h3>
-                    <canvas id="macd-{{ symbol }}" height="50"></canvas>
+                    <div class="chart-container">
+                        <canvas id="macd-{{ symbol }}"></canvas>
+                    </div>
                 </div>
                 
                 <!-- RSI & ADX -->
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <h3 class="font-bold text-gray-700 mb-2">RSI</h3>
-                        <canvas id="rsi-{{ symbol }}" height="80"></canvas>
+                        <div class="chart-container">
+                            <canvas id="rsi-{{ symbol }}"></canvas>
+                        </div>
                     </div>
                     <div>
                         <h3 class="font-bold text-gray-700 mb-2">ADX</h3>
-                        <canvas id="adx-{{ symbol }}" height="80"></canvas>
+                        <div class="chart-container">
+                            <canvas id="adx-{{ symbol }}"></canvas>
+                        </div>
                     </div>
                 </div>
                 
@@ -350,6 +368,7 @@
                         },
                         options: {
                             responsive: true,
+                            maintainAspectRatio: false,
                             plugins: { legend: { display: false } },
                             scales: { x: { display: false }, y: { position: 'right' } }
                         }
@@ -368,6 +387,7 @@
                         },
                         options: {
                             responsive: true,
+                            maintainAspectRatio: false,
                             plugins: { legend: { position: 'top' } },
                             scales: { y: { position: 'right' } }
                         }
@@ -383,6 +403,7 @@
                         },
                         options: {
                             responsive: true,
+                            maintainAspectRatio: false,
                             plugins: { legend: { display: false } },
                             scales: { y: { min: 0, max: 100, position: 'right' } }
                         }
@@ -398,6 +419,7 @@
                         },
                         options: {
                             responsive: true,
+                            maintainAspectRatio: false,
                             plugins: { legend: { display: false } },
                             scales: { y: { min: 0, max: 100, position: 'right' } }
                         }
