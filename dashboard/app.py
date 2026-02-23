@@ -79,9 +79,25 @@ def api_live_chart(symbol):
     from ta.momentum import RSIIndicator
     from ta.trend import MACD, ADXIndicator
     from ta.volatility import AverageTrueRange
+    from datetime import datetime, timedelta
     
     try:
-        df = yf.Ticker(symbol).history(period="1d", interval="5m")
+        # 使用 start 和 end 確保取得當日即時資料
+        # 取得過去 5 天確保有足夠資料
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=5)
+        
+        df = yf.download(
+            symbol, 
+            start=start_date.strftime('%Y-%m-%d'),
+            end=end_date.strftime('%Y-%m-%d'),
+            interval="5m",
+            progress=False
+        )
+        
+        # 如果下載失敗，回退到舊方法
+        if df is None or len(df) < 10:
+            df = yf.Ticker(symbol).history(period="5d", interval="5m")
         
         if df is None or len(df) < 10:
             return jsonify({"error": "無法取得資料"})
