@@ -69,20 +69,38 @@ class StockTradingBot:
     def get_stock_data(self, symbol, period="1mo", interval="5m"):
         """取得股票資料"""
         try:
+            from datetime import datetime, timedelta
+            
             # 嘗試多個 symbol 格式
             symbols_to_try = [
                 symbol,
-                f"{symbol}.TW" if not symbol.endswith('.TW') else symbol.replace('.TW', '.TW'),
-                symbol.replace('.TW', '') + '.TW'
+                f"{symbol}.TW" if not symbol.endswith('.TW') else symbol,
+                symbol.replace('.TW', '').replace('.TW', '') + '.TW'
             ]
             
             df = None
             last_error = None
             
+            # 計算日期範圍
+            if period == "1d":
+                days = 3
+            elif period == "5d":
+                days = 7
+            else:
+                days = 30
+            
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=days)
+            
             for sym in symbols_to_try:
                 try:
-                    stock = yf.Ticker(sym)
-                    df = stock.history(period=period, interval=interval)
+                    df = yf.download(
+                        sym,
+                        start=start_date.strftime('%Y-%m-%d'),
+                        end=end_date.strftime('%Y-%m-%d'),
+                        interval=interval,
+                        progress=False
+                    )
                     if df is not None and len(df) >= 10:
                         symbol = sym  # 使用成功的代碼
                         break
@@ -98,6 +116,13 @@ class StockTradingBot:
             if df.index.tz is not None:
                 df.index = df.index.tz_convert('Asia/Taipei')
                 df.index = df.index.tz_localize(None)
+            
+            logger.info(f"{symbol}: 取得 {len(df)} 筆資料")
+            return df
+            
+        except Exception as e:
+            logger.error(f"{symbol}: 取得資料失敗 - {e}")
+            return None
             
             logger.info(f"{symbol}: 取得 {len(df)} 筆資料")
             return df
