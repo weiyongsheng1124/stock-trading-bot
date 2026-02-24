@@ -82,18 +82,34 @@ def api_live_chart(symbol):
     from datetime import datetime, timedelta
     
     try:
-        # 使用 start 和 end 確保取得當日即時資料
-        # 取得過去 5 天確保有足夠資料
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=5)
+        # 嘗試多個 symbol 格式
+        symbols_to_try = [
+            symbol,
+            f"{symbol}.TW" if not symbol.endswith('.TW') else symbol,
+            symbol.replace('.TW', '').replace('.TW', '') + '.TW'
+        ]
         
-        df = yf.download(
-            symbol, 
-            start=start_date.strftime('%Y-%m-%d'),
-            end=end_date.strftime('%Y-%m-%d'),
-            interval="5m",
-            progress=False
-        )
+        df = None
+        success_symbol = symbol
+        
+        for sym in symbols_to_try:
+            try:
+                end_date = datetime.now()
+                start_date = end_date - timedelta(days=5)
+                
+                df = yf.download(
+                    sym, 
+                    start=start_date.strftime('%Y-%m-%d'),
+                    end=end_date.strftime('%Y-%m-%d'),
+                    interval="5m",
+                    progress=False
+                )
+                
+                if df is not None and len(df) >= 10:
+                    success_symbol = sym
+                    break
+            except:
+                continue
         
         # 如果下載失敗，回退到舊方法
         if df is None or len(df) < 10:

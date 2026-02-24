@@ -69,11 +69,29 @@ class StockTradingBot:
     def get_stock_data(self, symbol, period="1mo", interval="5m"):
         """取得股票資料"""
         try:
-            stock = yf.Ticker(symbol)
-            df = stock.history(period=period, interval=interval)
+            # 嘗試多個 symbol 格式
+            symbols_to_try = [
+                symbol,
+                f"{symbol}.TW" if not symbol.endswith('.TW') else symbol.replace('.TW', '.TW'),
+                symbol.replace('.TW', '') + '.TW'
+            ]
             
-            if df is None or len(df) < 50:
-                logger.warning(f"{symbol}: 資料不足")
+            df = None
+            last_error = None
+            
+            for sym in symbols_to_try:
+                try:
+                    stock = yf.Ticker(sym)
+                    df = stock.history(period=period, interval=interval)
+                    if df is not None and len(df) >= 10:
+                        symbol = sym  # 使用成功的代碼
+                        break
+                except Exception as e:
+                    last_error = e
+                    continue
+            
+            if df is None or len(df) < 10:
+                logger.warning(f"{symbol}: 無法取得足夠資料 ({last_error})")
                 return None
             
             # 移除時區
